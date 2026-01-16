@@ -4,6 +4,7 @@ import type { Itinerary } from '../types';
 import StorageService from '../services/StorageService';
 import ItineraryService from '../services/ItineraryService';
 import FileService from '../services/FileService';
+import { useAuth } from './AuthContext';
 
 interface ItineraryState {
   itineraries: Itinerary[];
@@ -23,9 +24,9 @@ type ItineraryAction =
 
 interface ItineraryContextType {
   state: ItineraryState;
-  addItinerary: (itinerary: Omit<Itinerary, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateItinerary: (id: string, itinerary: Partial<Itinerary>) => void;
-  deleteItinerary: (id: string) => void;
+  addItinerary: (itinerary: Omit<Itinerary, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateItinerary: (id: string, itinerary: Partial<Itinerary>) => Promise<void>;
+  deleteItinerary: (id: string) => Promise<void>;
   getItinerary: (id: string) => Itinerary | undefined;
   exportItinerary: (id: string) => void;
   importItinerary: (file: File) => Promise<void>;
@@ -64,6 +65,7 @@ const itineraryReducer = (state: ItineraryState, action: ItineraryAction): Itine
 };
 
 export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { currentUser } = useAuth();
   const [state, dispatch] = useReducer(itineraryReducer, {
     itineraries: [],
     loading: true,
@@ -72,21 +74,36 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    try {
-      const itineraries = StorageService.getAllItineraries();
-      dispatch({ type: 'SET_ITINERARIES', payload: itineraries });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'データの読み込みに失敗しました';
-      dispatch({ type: 'SET_ERROR', payload: message });
-      dispatch({ type: 'SET_NOTIFICATION', payload: { message, type: 'error' } });
-      dispatch({ type: 'SET_ITINERARIES', payload: [] });
-    }
-  }, []);
+    const loadItineraries = async () => {
+      if (!currentUser) {
+        dispatch({ type: 'SET_ITINERARIES', payload: [] });
+        return;
+      }
 
-  const addItinerary = (data: Omit<Itinerary, 'id' | 'createdAt' | 'updatedAt'>) => {
+      try {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        const itineraries = await StorageService.getAllItineraries(currentUser.uid);
+        dispatch({ type: 'SET_ITINERARIES', payload: itineraries });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'データの読み込みに失敗しました';
+        dispatch({ type: 'SET_ERROR', payload: message });
+        dispatch({ type: 'SET_NOTIFICATION', payload: { message, type: 'error' } });
+        dispatch({ type: 'SET_ITINERARIES', payload: [] });
+      }
+    };
+
+    loadItineraries();
+  }, [currentUser]);
+
+  const addItinerary = async (data: Omit<Itinerary, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!currentUser) {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'ログインが必要です', type: 'error' } });
+      return;
+    }
+
     try {
       const newItinerary = ItineraryService.createItinerary(data);
-      StorageService.saveItinerary(newItinerary);
+      await StorageService.saveItinerary(newItinerary, currentUser.uid);
       dispatch({ type: 'ADD_ITINERARY', payload: newItinerary });
       dispatch({ type: 'SET_NOTIFICATION', payload: { message: '行程表を保存しました', type: 'success' } });
     } catch (error) {
@@ -95,14 +112,19 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
-  const updateItinerary = (id: string, updates: Partial<Itinerary>) => {
+  const updateItinerary = async (id: string, updates: Partial<Itinerary>) => {
+    if (!currentUser) {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'ログインが必要です', type: 'error' } });
+      return;
+    }
+
     try {
-      const existing = StorageService.getItinerary(id);
+      const existing = await StorageService.getItinerary(id, currentUser.uid);
       if (!existing) {
         throw new Error('行程表が見つかりません');
       }
       const updated = { ...existing, ...updates, updatedAt: new Date().toISOString() };
-      StorageService.saveItinerary(updated);
+      await StorageService.saveItinerary(updated, currentUser.uid);
       dispatch({ type: 'UPDATE_ITINERARY', payload: updated });
       dispatch({ type: 'SET_NOTIFICATION', payload: { message: '行程表を更新しました', type: 'success' } });
     } catch (error) {
@@ -111,9 +133,14 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
-  const deleteItinerary = (id: string) => {
+  const deleteItinerary = async (id: string) => {
+    if (!currentUser) {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'ログインが必要です', type: 'error' } });
+      return;
+    }
+
     try {
-      StorageService.deleteItinerary(id);
+      await StorageService.deleteItinerary(id, currentUser.uid);
       dispatch({ type: 'DELETE_ITINERARY', payload: id });
       dispatch({ type: 'SET_NOTIFICATION', payload: { message: '行程表を削除しました', type: 'success' } });
     } catch (error) {
@@ -141,9 +168,14 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const importItinerary = async (file: File) => {
+    if (!currentUser) {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'ログインが必要です', type: 'error' } });
+      return;
+    }
+
     try {
       const itinerary = await FileService.importFromJSON(file);
-      StorageService.saveItinerary(itinerary);
+      await StorageService.saveItinerary(itinerary, currentUser.uid);
       dispatch({ type: 'ADD_ITINERARY', payload: itinerary });
       dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'インポートしました', type: 'success' } });
     } catch (error) {

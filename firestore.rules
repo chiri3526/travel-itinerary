@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Itineraries collection rules
+    match /itineraries/{itineraryId} {
+      // Allow read if the user is authenticated and owns the document
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow create if the user is authenticated and sets themselves as the owner
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      
+      // Allow update if the user is authenticated and owns the document
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow delete if the user is authenticated and owns the document
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+  }
+}

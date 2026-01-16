@@ -1,73 +1,134 @@
-# React + TypeScript + Vite
+# Travel Itinerary App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+旅行行程表を管理するWebアプリケーションです。Firebase認証とFirestoreを使用して、ユーザーごとにデータを管理します。
 
-Currently, two official plugins are available:
+## 機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ユーザー認証（メール/パスワード、Google認証）
+- 旅行行程表の作成・編集・削除
+- 行程詳細の管理（日付、時間、内容、金額、備考）
+- データのインポート/エクスポート
+- レスポンシブデザイン
 
-## React Compiler
+## セットアップ
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. 依存関係のインストール
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Firebaseプロジェクトの作成
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. [Firebase Console](https://console.firebase.google.com/)にアクセス
+2. 新しいプロジェクトを作成
+3. Webアプリを追加
+4. Firebase SDKの設定情報を取得
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 3. Firestoreの設定
+
+1. Firebase Consoleで「Firestore Database」を選択
+2. 「データベースを作成」をクリック
+3. テストモードで開始（後で本番モードに変更可能）
+4. ロケーションを選択（asia-northeast1推奨）
+
+### 4. 認証の設定
+
+1. Firebase Consoleで「Authentication」を選択
+2. 「Sign-in method」タブを開く
+3. 「メール/パスワード」を有効化
+4. 「Google」を有効化（オプション）
+
+### 5. Firestoreセキュリティルールの設定
+
+Firebase Consoleの「Firestore Database」→「ルール」タブで以下のルールを設定：
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /itineraries/{itineraryId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}
 ```
+
+### 6. 環境変数の設定
+
+`.env.example`をコピーして`.env`ファイルを作成し、Firebaseの設定情報を入力：
+
+```bash
+cp .env.example .env
+```
+
+`.env`ファイルを編集：
+
+```
+VITE_FIREBASE_API_KEY=your_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+### 7. 開発サーバーの起動
+
+```bash
+npm run dev
+```
+
+ブラウザで `http://localhost:5173` を開きます。
+
+## ビルド
+
+```bash
+npm run build
+```
+
+ビルドされたファイルは`dist`ディレクトリに出力されます。
+
+## デプロイ
+
+### Firebase Hostingへのデプロイ
+
+1. Firebase CLIをインストール：
+
+```bash
+npm install -g firebase-tools
+```
+
+2. Firebaseにログイン：
+
+```bash
+firebase login
+```
+
+3. Firebaseプロジェクトを初期化：
+
+```bash
+firebase init hosting
+```
+
+4. デプロイ：
+
+```bash
+npm run build
+firebase deploy
+```
+
+## 技術スタック
+
+- React 18
+- TypeScript
+- Material-UI (MUI)
+- Firebase Authentication
+- Cloud Firestore
+- Vite
+- React Router
+
+## ライセンス
+
+MIT

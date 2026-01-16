@@ -1,111 +1,122 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+} from 'firebase/firestore';
+import { db } from '../config/firebase';
 import type { Itinerary } from '../types';
 
 class StorageService {
-  private readonly STORAGE_KEY = 'travel_itineraries';
+  private readonly COLLECTION_NAME = 'itineraries';
 
-  getAllItineraries(): Itinerary[] {
+  async getAllItineraries(userId: string): Promise<Itinerary[]> {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
-      if (!data) {
-        return [];
-      }
+      const q = query(
+        collection(db, this.COLLECTION_NAME),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
       
-      const parsed = JSON.parse(data);
+      const querySnapshot = await getDocs(q);
+      const itineraries: Itinerary[] = [];
       
-      // Validate that parsed data is an array
-      if (!Array.isArray(parsed)) {
-        console.error('Invalid data format in localStorage');
-        return [];
-      }
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        itineraries.push({
+          id: doc.id,
+          title: data.title,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          items: data.items || [],
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        });
+      });
       
-      return parsed;
+      return itineraries;
     } catch (error) {
       console.error('Failed to load itineraries:', error);
-      
-      if (error instanceof DOMException) {
-        if (error.name === 'SecurityError') {
-          throw new Error('ストレージへのアクセスが拒否されました。プライベートモードを無効にしてください。');
-        }
-      }
-      
-      if (error instanceof SyntaxError) {
-        console.error('Corrupted data in localStorage, clearing...');
-        // Clear corrupted data
-        try {
-          localStorage.removeItem(this.STORAGE_KEY);
-        } catch {
-          // Ignore if we can't clear
-        }
-        throw new Error('保存されたデータが破損しています。データをクリアしました。');
-      }
-      
-      return [];
+      throw new Error('データの読み込みに失敗しました。');
     }
   }
 
-  getItinerary(id: string): Itinerary | null {
-    const itineraries = this.getAllItineraries();
-    return itineraries.find(item => item.id === id) || null;
-  }
-
-  saveItinerary(itinerary: Itinerary): void {
+  async getItinerary(id: string, userId: string): Promise<Itinerary | null> {
     try {
-      const itineraries = this.getAllItineraries();
-      const index = itineraries.findIndex(item => item.id === itinerary.id);
+      const docRef = doc(db, this.COLLECTION_NAME, id);
+      const docSnap = await getDoc(docRef);
       
-      if (index >= 0) {
-        itineraries[index] = itinerary;
-      } else {
-        itineraries.push(itinerary);
+      if (!docSnap.exists()) {
+        return null;
       }
       
-      const dataString = JSON.stringify(itineraries);
+      const data = docSnap.data();
       
-      // Check approximate size before saving
-      const sizeInBytes = new Blob([dataString]).size;
-      const sizeInMB = sizeInBytes / (1024 * 1024);
-      
-      if (sizeInMB > 4) {
-        throw new Error('データサイズが大きすぎます（最大4MB）。古いデータを削除してください。');
+      // Check if the itinerary belongs to the user
+      if (data.userId !== userId) {
+        throw new Error('アクセス権限がありません。');
       }
       
-      localStorage.setItem(this.STORAGE_KEY, dataString);
+      return {
+        id: docSnap.id,
+        title: data.title,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        items: data.items || [],
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      };
     } catch (error) {
-      if (error instanceof DOMException) {
-        if (error.name === 'QuotaExceededError') {
-          throw new Error('ストレージの容量が不足しています。古いデータを削除してください。');
-        }
-        if (error.name === 'SecurityError') {
-          throw new Error('ストレージへのアクセスが拒否されました。プライベートモードを無効にしてください。');
-        }
-      }
-      
-      // Re-throw if it's already our custom error
-      if (error instanceof Error && error.message.includes('データサイズが大きすぎます')) {
-        throw error;
-      }
-      
-      throw new Error('データの保存に失敗しました。ブラウザの設定を確認してください。');
+      console.error('Failed to load itinerary:', error);
+      throw new Error('データの読み込みに失敗しました。');
     }
   }
 
-  deleteItinerary(id: string): void {
+  async saveItinerary(itinerary: Itinerary, userId: string): Promise<void> {
     try {
-      const itineraries = this.getAllItineraries();
-      const filtered = itineraries.filter(item => item.id !== id);
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+      const docRef = doc(db, this.COLLECTION_NAME, itinerary.id);
+      await setDoc(docRef, {
+        ...itinerary,
+        userId,
+      });
     } catch (error) {
-      if (error instanceof DOMException) {
-        if (error.name === 'SecurityError') {
-          throw new Error('ストレージへのアクセスが拒否されました。プライベートモードを無効にしてください。');
-        }
-      }
-      throw new Error('データの削除に失敗しました。ブラウザの設定を確認してください。');
+      console.error('Failed to save itinerary:', error);
+      throw new Error('データの保存に失敗しました。');
     }
   }
 
-  clearAll(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
+  async deleteItinerary(id: string, userId: string): Promise<void> {
+    try {
+      // First verify ownership
+      const itinerary = await this.getItinerary(id, userId);
+      if (!itinerary) {
+        throw new Error('データが見つかりません。');
+      }
+      
+      const docRef = doc(db, this.COLLECTION_NAME, id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Failed to delete itinerary:', error);
+      throw new Error('データの削除に失敗しました。');
+    }
+  }
+
+  async clearAll(userId: string): Promise<void> {
+    try {
+      const itineraries = await this.getAllItineraries(userId);
+      const deletePromises = itineraries.map((itinerary) =>
+        deleteDoc(doc(db, this.COLLECTION_NAME, itinerary.id))
+      );
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Failed to clear all itineraries:', error);
+      throw new Error('データのクリアに失敗しました。');
+    }
   }
 }
 
