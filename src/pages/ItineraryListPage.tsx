@@ -36,7 +36,7 @@ import type { Itinerary } from '../types';
 
 const ItineraryListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { state, deleteItinerary, exportItinerary, importItinerary } = useItinerary();
+  const { state, deleteItinerary, importItinerary } = useItinerary();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
