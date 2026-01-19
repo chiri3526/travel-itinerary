@@ -21,6 +21,21 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ja } from 'date-fns/locale';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useItinerary } from '../contexts/ItineraryContext';
 import type { ItineraryItem } from '../types';
 import ItemRow from '../components/ItemRow';
@@ -72,6 +87,28 @@ const ItineraryFormPage: React.FC = () => {
 
   const handleDeleteItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
+  };
+
+  // ドラッグ&ドロップのセンサー設定
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // ドラッグ終了時の処理
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setItems((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const validate = (): boolean => {
@@ -271,28 +308,37 @@ const ItineraryFormPage: React.FC = () => {
               </Typography>
 
               <Box sx={{ overflowX: 'auto', mx: { xs: -2, sm: 0 } }}>
-                <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>日付</TableCell>
-                      <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>時間</TableCell>
-                      <TableCell sx={{ minWidth: { xs: 150, sm: 'auto' } }}>内容</TableCell>
-                      <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>金額</TableCell>
-                      <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>備考</TableCell>
-                      <TableCell sx={{ minWidth: { xs: 60, sm: 'auto' } }}>削除</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {items.map((item) => (
-                      <ItemRow
-                        key={item.id}
-                        item={item}
-                        onChange={handleItemChange}
-                        onDelete={handleDeleteItem}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ minWidth: { xs: 40, sm: 'auto' } }}>順序</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>日付</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>時間</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 150, sm: 'auto' } }}>内容</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>金額</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>備考</TableCell>
+                        <TableCell sx={{ minWidth: { xs: 60, sm: 'auto' } }}>削除</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                        {items.map((item) => (
+                          <ItemRow
+                            key={item.id}
+                            item={item}
+                            onChange={handleItemChange}
+                            onDelete={handleDeleteItem}
+                          />
+                        ))}
+                      </SortableContext>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               </Box>
 
               <Button
