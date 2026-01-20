@@ -8,11 +8,6 @@ import {
   Button,
   Box,
   Divider,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
   Stack,
   Alert,
 } from '@mui/material';
@@ -38,7 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useItinerary } from '../contexts/ItineraryContext';
 import type { ItineraryItem } from '../types';
-import ItemRow from '../components/ItemRow';
+import TimelineItem from '../components/TimelineItem';
 import ItineraryService from '../services/ItineraryService';
 
 const ItineraryFormPage: React.FC = () => {
@@ -307,48 +302,32 @@ const ItineraryFormPage: React.FC = () => {
                 行程詳細
               </Typography>
 
-              <Box sx={{ overflowX: 'auto', mx: { xs: -2, sm: 0 } }}>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <Table size="small" sx={{ minWidth: { xs: 600, sm: 'auto' } }}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ minWidth: { xs: 40, sm: 'auto' } }}>順序</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>日付</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>時間</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 150, sm: 'auto' } }}>内容</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>金額</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>備考</TableCell>
-                        <TableCell sx={{ minWidth: { xs: 60, sm: 'auto' } }}>削除</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                        {items.map((item) => (
-                          <ItemRow
-                            key={item.id}
-                            item={item}
-                            onChange={handleItemChange}
-                            onDelete={handleDeleteItem}
-                          />
-                        ))}
-                      </SortableContext>
-                    </TableBody>
-                  </Table>
-                </DndContext>
-              </Box>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <Box sx={{ position: 'relative' }}>
+                  <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                    {items.map((item, index) => (
+                      <TimelineItem
+                        key={item.id}
+                        item={item}
+                        onChange={handleItemChange}
+                        onDelete={handleDeleteItem}
+                      />
+                    ))}
+                  </SortableContext>
+                </Box>
+              </DndContext>
 
               <Button
                 startIcon={<AddIcon />}
                 onClick={handleAddItem}
-                variant="outlined"
-                fullWidth={false}
+                variant="contained"
+                fullWidth
                 sx={{ 
                   mt: 2,
-                  width: { xs: '100%', sm: 'auto' }
                 }}
               >
                 行を追加

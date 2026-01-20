@@ -64,6 +64,10 @@ const ItineraryListPage: React.FC = () => {
     navigate(`/edit/${id}`);
   };
 
+  const handleView = (id: string) => {
+    navigate(`/detail/${id}`);
+  };
+
   const handleDelete = (id: string) => {
     if (window.confirm('この行程表を削除してもよろしいですか？')) {
       deleteItinerary(id);
@@ -231,7 +235,17 @@ const ItineraryListPage: React.FC = () => {
               </TableHead>
               <TableBody>
                 {paginatedItineraries.map((itinerary, index) => (
-                  <TableRow key={itinerary.id} hover>
+                  <TableRow 
+                    key={itinerary.id} 
+                    hover
+                    onClick={() => handleView(itinerary.id)}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover'
+                      }
+                    }}
+                  >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar sx={{ bgcolor: 'primary.light' }}>
@@ -270,14 +284,20 @@ const ItineraryListPage: React.FC = () => {
                     <TableCell align="center">
                       <IconButton
                         size="small"
-                        onClick={() => handleEdit(itinerary.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(itinerary.id);
+                        }}
                         sx={{ mr: 1 }}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDelete(itinerary.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(itinerary.id);
+                        }}
                         color="error"
                       >
                         <DeleteIcon fontSize="small" />
