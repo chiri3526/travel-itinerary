@@ -403,7 +403,7 @@ const ItineraryDetailPage: React.FC = () => {
               borderRadius: 1,
             }}
           >
-            チケットを予約する
+            行程を編集
           </Button>
         </Box>
       )}
