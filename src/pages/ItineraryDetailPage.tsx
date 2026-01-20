@@ -28,6 +28,7 @@ import { useItinerary } from '../contexts/ItineraryContext';
 import ItineraryService from '../services/ItineraryService';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { linkifyText } from '../utils/linkify';
 
 const ItineraryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -281,7 +282,7 @@ const ItineraryDetailPage: React.FC = () => {
                           </Box>
                           {item.note && (
                             <Box sx={{ fontSize: '0.75rem', color: '#757575', mb: 0.5 }}>
-                              {item.note}
+                              {linkifyText(item.note)}
                             </Box>
                           )}
                           {item.amount > 0 && (
@@ -338,7 +339,7 @@ const ItineraryDetailPage: React.FC = () => {
                                 </Box>
                                 <Box sx={{ minWidth: { xs: 'auto', sm: 150 } }}>
                                   <Typography variant="body2" color="text.secondary">
-                                    {item.note || '-'}
+                                    {item.note ? linkifyText(item.note) : '-'}
                                   </Typography>
                                 </Box>
                               </Stack>
