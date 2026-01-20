@@ -309,7 +309,7 @@ const ItineraryFormPage: React.FC = () => {
               >
                 <Box sx={{ position: 'relative' }}>
                   <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                    {items.map((item, index) => (
+                    {items.map((item) => (
                       <TimelineItem
                         key={item.id}
                         item={item}
