@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 /**
  * URLパターンのマッチング
  */
@@ -8,12 +10,12 @@ export const URL_REGEX = /https?:\/\/[^\s<>"`{}|\\^[\]]*[^\s<>"`{}|\\^[\].,;:!?(
  * @param text テキスト
  * @returns JSX要素の配列（テキストとリンク要素の混合）
  */
-export const linkifyText = (text: string) => {
+export const linkifyText = (text: string): ReactNode => {
   if (!text || typeof text !== 'string') {
     return text;
   }
 
-  const parts: (string | JSX.Element)[] = [];
+  const parts: ReactNode[] = [];
   let lastIndex = 0;
   let match;
 
