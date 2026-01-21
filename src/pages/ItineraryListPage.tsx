@@ -1,18 +1,10 @@
 import React, { useRef, useState, useMemo } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
   TextField,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   IconButton,
   Chip,
   Pagination,
@@ -23,7 +15,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -80,26 +71,6 @@ const ItineraryListPage: React.FC = () => {
     return <Icon />;
   };
 
-  const getStatusColor = (itinerary: Itinerary): 'success' | 'warning' | 'default' => {
-    const now = new Date();
-    const start = new Date(itinerary.startDate);
-    const end = new Date(itinerary.endDate);
-    
-    if (now > end) return 'success';
-    if (now >= start && now <= end) return 'warning';
-    return 'default';
-  };
-
-  const getStatusLabel = (itinerary: Itinerary): string => {
-    const now = new Date();
-    const start = new Date(itinerary.startDate);
-    const end = new Date(itinerary.endDate);
-    
-    if (now > end) return '確定済み';
-    if (now >= start && now <= end) return '計画中';
-    return '下書き';
-  };
-
   const calculateDays = (startDate: string, endDate: string): number => {
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -143,221 +114,274 @@ const ItineraryListPage: React.FC = () => {
   }, [state.itineraries]);
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' }, fontWeight: 600, mb: 1 }}>
-          行程表一覧
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          作成済みの旅行プランを管理・編集できます。
+    <Box sx={{ display: 'flex', maxWidth: 'lg', mx: 'auto', width: '100%', gap: { xs: 0, md: 3 }, px: { xs: 2, sm: 3 }, flexDirection: { xs: 'column', md: 'row' } }}>
+      {/* Sidebar */}
+      <Box sx={{ minWidth: 180, display: { xs: 'block', md: 'block' }, pt: 1, mb: { xs: 2, md: 0 }, borderBottom: { xs: '2px solid', md: 'none' }, borderColor: { xs: 'primary.main', md: 'transparent' }, pb: { xs: 2, md: 0 } }}>
+        <Typography variant="body2" color="primary.main" sx={{ mb: 2, fontWeight: 700, letterSpacing: 1, fontSize: '0.7rem', textTransform: 'uppercase' }}>
+          MY JOURNEYS
         </Typography>
       </Box>
 
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <Button
-          variant="outlined"
-          startIcon={<UploadFileIcon />}
-          onClick={handleImportClick}
-        >
-          Excelインポート
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<DownloadIcon />}
-        >
-          Excelエクスポート
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleNewItinerary}
-        >
-          新しい行程表を作成
-        </Button>
-      </Box>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-
-      {/* Search Bar */}
-      <TextField
-        fullWidth
-        placeholder="旅行名で検索..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
-        }}
-        sx={{ mb: 3 }}
-      />
-
-      {/* Table */}
-      {state.itineraries.length === 0 ? (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '50vh',
-          }}
-        >
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            まだ行程表がありません
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            上のボタンから新しい行程表を作成してください
-          </Typography>
+      {/* Main Content */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        {/* Header */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, fontWeight: 700, mb: 1 }}>
+              行程表一覧
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              作成済みの洗練された旅行プランを管理・整理します。
+            </Typography>
+          </Box>
+          {/* Action Buttons - Right Side */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end', width: { xs: '100%', sm: 'auto' } }}>
+            <Button
+              variant="outlined"
+              startIcon={<UploadFileIcon />}
+              onClick={handleImportClick}
+              sx={{ fontSize: '0.875rem', py: 1, px: 2, display: { xs: 'none', sm: 'inline-flex' } }}
+            >
+              インポート
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleNewItinerary}
+              sx={{ fontSize: '0.875rem', py: 1, px: 2, flex: { xs: 1, sm: 'unset' }, borderRadius: '50px' }}
+            >
+              新規作成
+            </Button>
+          </Box>
         </Box>
-      ) : (
-        <>
-          <TableContainer component={Paper} sx={{ mb: 3 }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.50' }}>
-                  <TableCell>旅行名</TableCell>
-                  <TableCell>日程</TableCell>
-                  <TableCell align="right">予算</TableCell>
-                  <TableCell>ステータス</TableCell>
-                  <TableCell align="center"></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedItineraries.map((itinerary, index) => (
-                  <TableRow 
-                    key={itinerary.id} 
-                    hover
-                    onClick={() => handleView(itinerary.id)}
-                    sx={{ 
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+
+        {/* Search Bar */}
+        <TextField
+          fullWidth
+          placeholder="目的地や旅行する下で検索..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ mb: 3 }}
+        />
+
+        {/* Content */}
+        {state.itineraries.length === 0 ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '50vh',
+            }}
+          >
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              まだ行程表がありません
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              上のボタンから新しい行程表を作成してください
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            {/* Card Grid */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 3, mb: 3 }}>
+              {paginatedItineraries.map((itinerary, index) => (
+                <Box key={itinerary.id}>
+                  <Card
+                    sx={{
                       cursor: 'pointer',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'all 0.3s ease',
+                      borderRadius: 3,
                       '&:hover': {
-                        backgroundColor: 'action.hover'
-                      }
+                        transform: 'translateY(-4px)',
+                        boxShadow: 4,
+                      },
                     }}
+                    onClick={() => handleView(itinerary.id)}
                   >
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.light' }}>
-                          {getIcon(index)}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body1" fontWeight={500}>
-                            {itinerary.title}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            国内旅行・{itinerary.items.length > 0 ? '観光' : '未設定'}
-                          </Typography>
+                    {/* Image Placeholder */}
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: 200,
+                        background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d4bb 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Avatar sx={{ bgcolor: 'rgba(25, 118, 210, 0.15)', width: 80, height: 80, color: 'primary.main' }}>
+                        {getIcon(index)}
+                      </Avatar>
+                      {/* Draft Badge */}
+                      <Chip
+                        label="DRAFT"
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 12,
+                          left: 12,
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          color: 'white',
+                          fontWeight: 600,
+                        }}
+                      />
+                    </Box>
+
+                    <CardContent sx={{ flex: 1, pb: 1 }}>
+                      {/* Title and Actions */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
+                          {itinerary.title}
+                        </Typography>
+                        <Box
+                          sx={{ display: 'flex', gap: 0.5 }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(itinerary.id);
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(itinerary.id);
+                            }}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </Box>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {itinerary.startDate} - {itinerary.endDate}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {calculateDays(itinerary.startDate, itinerary.endDate)}日間
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body1" fontWeight={500}>
-                        ¥{calculateTotalBudget(itinerary).toLocaleString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusLabel(itinerary)}
-                        color={getStatusColor(itinerary)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(itinerary.id);
-                        }}
-                        sx={{ mr: 1 }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(itinerary.id);
-                        }}
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
 
-          {/* Pagination */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              全 {filteredItineraries.length} 件中 1 から {Math.min(itemsPerPage, filteredItineraries.length)} 件を表示
-            </Typography>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-            />
-          </Box>
+                      {/* Date */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          📅
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {itinerary.startDate} - {itinerary.endDate}
+                        </Typography>
+                      </Box>
 
-          {/* Statistics Cards */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
-            <Card sx={{ flex: 1 }}>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  総旅行数
-                </Typography>
-                <Typography variant="h3" fontWeight={600}>
-                  {totalItineraries}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card sx={{ flex: 1 }}>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  今月の予定
-                </Typography>
-                <Typography variant="h3" fontWeight={600}>
-                  {thisMonthItineraries}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card sx={{ flex: 1 }}>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  予算総計 (確定分)
-                </Typography>
-                <Typography variant="h3" fontWeight={600} color="primary.main">
-                  ¥{totalBudget.toLocaleString()}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Stack>
-        </>
-      )}
-    </Container>
+                      {/* Days */}
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        {calculateDays(itinerary.startDate, itinerary.endDate)} DAYS
+                      </Typography>
+
+                      {/* Budget */}
+                      <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                          EST. BUDGET
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          ¥{calculateTotalBudget(itinerary).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Box>
+              ))}
+            </Box>
+
+            {/* Pagination */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+              <Typography variant="body2" color="text.secondary">
+                Showing {Math.min(itemsPerPage * (page - 1) + 1, filteredItineraries.length)} of {filteredItineraries.length} trip{filteredItineraries.length !== 1 ? 's' : ''}
+              </Typography>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+
+            {/* Statistics Cards */}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+              <Card sx={{ flex: 1, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        🗂️
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        総旅行数
+                      </Typography>
+                    </Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {totalItineraries}件
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card sx={{ flex: 1, backgroundColor: 'rgba(255, 152, 0, 0.05)' }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        📅
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        今月の予定
+                      </Typography>
+                    </Box>
+                    <Typography variant="h5" fontWeight={700}>
+                      {thisMonthItineraries}件
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+              <Card sx={{ flex: 1, backgroundColor: 'rgba(76, 175, 80, 0.05)' }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        💰
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        予算総計
+                      </Typography>
+                    </Box>
+                    <Typography variant="h5" fontWeight={700} color="primary.main">
+                      ¥{totalBudget.toLocaleString()}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Stack>
+          </>
+        )}
+      </Box>
+    </Box>
   );
 };
 
