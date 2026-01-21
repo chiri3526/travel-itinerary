@@ -166,7 +166,7 @@ const ItineraryListPage: React.FC = () => {
         {/* Search Bar */}
         <TextField
           fullWidth
-          placeholder="目的地や旅行する下で検索..."
+          placeholder="旅程を検索"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           InputProps={{
