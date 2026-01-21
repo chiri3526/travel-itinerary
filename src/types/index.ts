@@ -15,4 +15,5 @@ export interface Itinerary {
   items: ItineraryItem[];
   createdAt: string;
   updatedAt: string;
+  coverImage?: string; // Base64 or image URL
 }

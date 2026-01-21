@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -24,6 +24,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import ShareIcon from '@mui/icons-material/Share';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { useItinerary } from '../contexts/ItineraryContext';
 import ItineraryService from '../services/ItineraryService';
 import { format } from 'date-fns';
@@ -36,8 +37,35 @@ const ItineraryDetailPage: React.FC = () => {
   const { getItinerary, exportItinerary } = useItinerary();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [coverImage, setCoverImage] = useState<string | undefined>(undefined);
 
   const itinerary = id ? getItinerary(id) : undefined;
+
+  // Initialize cover image from itinerary
+  React.useEffect(() => {
+    if (itinerary?.coverImage) {
+      setCoverImage(itinerary.coverImage);
+    }
+  }, [itinerary?.coverImage]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setCoverImage(result);
+        // Here you would typically save this to your backend/context
+        // For now, it's just stored in local state
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
 
   if (!itinerary) {
     return (
@@ -104,6 +132,9 @@ const ItineraryDetailPage: React.FC = () => {
               <Typography variant="caption" color="text.secondary">
                 {formatDate(itinerary.startDate)}
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {dayCount}日間 • {itinerary.items.length}件 • ¥{totalAmount.toLocaleString()}
+              </Typography>
             </Box>
             <Box className="itinerary-detail-header-actions">
               <IconButton size="small">
@@ -117,114 +148,229 @@ const ItineraryDetailPage: React.FC = () => {
         </Box>
       )}
 
-      {/* Desktop Header */}
-      {!isMobile && (
-        <Paper elevation={2} sx={{ p: { xs: 3, sm: 4 }, mb: 3 }}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' }, fontWeight: 600 }}>
-              {itinerary.title}
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-              <Chip
-                label={`${formatDate(itinerary.startDate)} 〜 ${formatDate(itinerary.endDate)}`}
-                color="primary"
-                variant="outlined"
-                sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+      {/* Desktop & Mobile Content */}
+      <Box sx={{ display: 'flex', gap: 3, pb: isMobile ? 12 : 0 }}>
+        {/* Left Sidebar - Desktop only */}
+        {!isMobile && (
+          <Box sx={{ width: 280, flexShrink: 0 }}>
+            {/* Back Button */}
+            <Box sx={{ mb: 2 }}>
+              <IconButton 
+                size="small" 
+                onClick={handleBack}
+              >
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Card */}
+            <Card 
+              elevation={3}
+              sx={{ 
+                overflow: 'hidden',
+                borderRadius: 2,
+              }}
+            >
+              {/* Image */}
+              <Box 
+                onClick={handleImageClick}
+                sx={{
+                  width: '100%',
+                  height: 160,
+                  background: coverImage 
+                    ? `url(${coverImage})`
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  p: 2,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                {/* Overlay for image button feedback */}
+                {!coverImage && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.3) 0%, rgba(25, 118, 210, 0.3) 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      gap: 1,
+                    }}
+                  >
+                    <CameraAltIcon sx={{ color: 'white', fontSize: '2rem' }} />
+                    <Typography sx={{ color: 'white', fontSize: '0.75rem' }}>
+                      クリックして画像を追加
+                    </Typography>
+                  </Box>
+                )}
+                {coverImage && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      '&:hover': {
+                        opacity: 1,
+                      },
+                    }}
+                  >
+                    <CameraAltIcon sx={{ color: 'white', fontSize: '1.5rem' }} />
+                  </Box>
+                )}
+              </Box>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
               />
-              <Chip
-                label={`${dayCount}日間`}
-                color="secondary"
-                variant="outlined"
-              />
-            </Stack>
+
+              <CardContent sx={{ p: 2.5 }}>
+                {/* Trip label */}
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'text.secondary', 
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    fontSize: '0.65rem',
+                    letterSpacing: 0.5,
+                    display: 'block',
+                    mb: 1,
+                  }}
+                >
+                  Upcoming Trip
+                </Typography>
+
+                {/* Title */}
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 700,
+                    mb: 0.5,
+                    fontSize: '1.1rem',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {itinerary.title}
+                </Typography>
+
+                {/* Date info */}
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    mb: 2,
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {formatDate(itinerary.startDate)}
+                  {dayCount > 1 && (
+                    <>
+                      <br />
+                      {dayCount}日間
+                    </>
+                  )}
+                </Typography>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Total estimated */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: 'text.secondary',
+                      display: 'block',
+                      mb: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Total Estimated
+                  </Typography>
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 700,
+                      color: 'text.primary',
+                    }}
+                  >
+                    ¥{totalAmount.toLocaleString()}
+                  </Typography>
+                </Box>
+
+                {/* Edit Plan Button */}
+                <Button 
+                  variant="contained" 
+                  fullWidth
+                  onClick={handleEdit}
+                  startIcon={<EditIcon />}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.95rem',
+                    py: 1.2,
+                    borderRadius: 1,
+                  }}
+                >
+                  Edit Plan
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Share & Menu buttons */}
+            <Box sx={{ display: 'flex', gap: 1, mt: 2, justifyContent: 'center' }}>
+              <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
+                <ShareIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" sx={{ border: '1px solid #e0e0e0' }}>
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
+        )}
 
-          {/* 統計情報 */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-              <Avatar sx={{ bgcolor: 'primary.light', width: 32, height: 32 }}>
-                <EventNoteIcon fontSize="small" />
-              </Avatar>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  総項目数
-                </Typography>
-                <Typography variant="h6">
-                  {itinerary.items.length}件
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-              <Avatar sx={{ bgcolor: 'success.light', width: 32, height: 32 }}>
-                <AttachMoneyIcon fontSize="small" />
-              </Avatar>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  合計金額
-                </Typography>
-                <Typography variant="h6" color="success.main">
-                  ¥{totalAmount.toLocaleString()}
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-              <Avatar sx={{ bgcolor: 'info.light', width: 32, height: 32 }}>
-                <AccessTimeIcon fontSize="small" />
-              </Avatar>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  期間
-                </Typography>
-                <Typography variant="h6">
-                  {dayCount}日間
-                </Typography>
-              </Box>
-            </Box>
-          </Stack>
-
-          {/* アクションボタン */}
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
-            justifyContent="flex-end"
-          >
-            <Button 
-              startIcon={<ArrowBackIcon />} 
-              onClick={handleBack}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              戻る
-            </Button>
-            <Button 
-              startIcon={<DownloadIcon />} 
-              variant="outlined" 
-              onClick={handleExport}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              エクスポート
-            </Button>
-            <Button 
-              startIcon={<EditIcon />} 
-              variant="contained" 
-              onClick={handleEdit}
-              sx={{ width: { xs: '100%', sm: 'auto' } }}
-            >
-              編集
-            </Button>
-          </Stack>
-        </Paper>
-      )}
-
-      {/* Content */}
-      <Box sx={{ pb: isMobile ? 12 : 0 }}>
-        {/* 日程詳細 */}
-        <Stack spacing={3}>
-          {Array.from(groupedItems.entries())
-            .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-            .map(([date, items]) => (
-              <Box key={date}>
-                {isMobile ? (
-                  // Mobile Timeline View
+        {/* Right Content - Timeline */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* 日程詳細 */}
+          <Stack spacing={3}>
+            {Array.from(groupedItems.entries())
+              .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+              .map(([date, items]) => (
+                <Box key={date}>
+                  {/* Timeline View */}
                   <Box sx={{ position: 'relative', pl: 3 }}>
                     {/* Timeline line */}
                     <Box
@@ -303,79 +449,34 @@ const ItineraryDetailPage: React.FC = () => {
                         </Box>
                       ))}
                   </Box>
-                ) : (
-                  // Desktop Card View
-                  <Card elevation={2}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{ 
-                        fontSize: { xs: '1.125rem', sm: '1.25rem' },
-                        fontWeight: 600,
-                        color: 'primary.main',
-                        mb: 2
-                      }}>
-                        {formatDate(date)}
-                      </Typography>
-                      <Stack spacing={2}>
-                        {items
-                          .sort((a, b) => a.time.localeCompare(b.time))
-                          .map((item, index) => (
-                            <Box key={item.id}>
-                              {index > 0 && <Divider sx={{ my: 1 }} />}
-                              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-                                <Box sx={{ minWidth: { xs: 'auto', sm: 120 } }}>
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                    {item.time || '時間未設定'}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ flex: 1 }}>
-                                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                    {item.content || '内容未設定'}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ minWidth: { xs: 'auto', sm: 100 } }}>
-                                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>
-                                    {item.amount ? `¥${item.amount.toLocaleString()}` : '-'}
-                                  </Typography>
-                                </Box>
-                                <Box sx={{ minWidth: { xs: 'auto', sm: 150 } }}>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {item.note ? linkifyText(item.note) : '-'}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Box>
-                          ))}
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                )}
-              </Box>
-            ))}
-        </Stack>
+                </Box>
+              ))}
+          </Stack>
 
-        {/* 空の状態 */}
-        {itinerary.items.length === 0 && (
-          <Card elevation={2}>
-            <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                まだ行程詳細が登録されていません
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                編集ボタンから行程詳細を追加してください
-              </Typography>
-              <Button 
-                variant="contained" 
-                startIcon={<EditIcon />}
-                onClick={handleEdit}
-              >
-                編集して追加
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+          {/* 空の状態 */}
+          {itinerary.items.length === 0 && (
+            <Card elevation={2}>
+              <CardContent sx={{ textAlign: 'center', py: 6 }}>
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  まだ行程詳細が登録されていません
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  編集ボタンから行程詳細を追加してください
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  startIcon={<EditIcon />}
+                  onClick={handleEdit}
+                >
+                  編集して追加
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </Box>
       </Box>
 
-      {/* Mobile Bottom CTA */}
+      {/* Mobile Bottom CTA Button */}
       {isMobile && (
         <Box
           sx={{
