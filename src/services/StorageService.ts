@@ -36,6 +36,7 @@ class StorageService {
           items: data.items || [],
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
+          coverImage: data.coverImage,
         });
       });
       
@@ -70,6 +71,7 @@ class StorageService {
         items: data.items || [],
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
+        coverImage: data.coverImage,
       };
     } catch (error) {
       console.error('Failed to load itinerary:', error);

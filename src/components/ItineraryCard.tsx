@@ -54,6 +54,18 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
 
   return (
     <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {itinerary.coverImage && (
+        <Box
+          component="img"
+          src={itinerary.coverImage}
+          alt={itinerary.title}
+          sx={{
+            width: '100%',
+            height: 200,
+            objectFit: 'cover',
+          }}
+        />
+      )}
       <CardContent sx={{ flexGrow: 1, pb: 1 }}>
         <Typography 
           variant="h6" 

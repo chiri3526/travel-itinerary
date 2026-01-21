@@ -28,7 +28,7 @@ import { linkifyText } from '../utils/linkify';
 const ItineraryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getItinerary } = useItinerary();
+  const { getItinerary, updateItinerary } = useItinerary();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,13 +45,13 @@ const ItineraryDetailPage: React.FC = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && id && itinerary) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const result = event.target?.result as string;
         setCoverImage(result);
-        // Here you would typically save this to your backend/context
-        // For now, it's just stored in local state
+        // Save the image to the itinerary
+        updateItinerary(id, { coverImage: result });
       };
       reader.readAsDataURL(file);
     }

@@ -219,35 +219,50 @@ const ItineraryListPage: React.FC = () => {
                     onClick={() => handleView(itinerary.id)}
                   >
                     {/* Image Placeholder */}
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: 200,
-                        background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d4bb 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <Avatar sx={{ bgcolor: 'rgba(25, 118, 210, 0.15)', width: 80, height: 80, color: 'primary.main' }}>
-                        {getIcon(index)}
-                      </Avatar>
-                      {/* Draft Badge */}
-                      <Chip
-                        label="DRAFT"
-                        size="small"
+                    {itinerary.coverImage ? (
+                      <Box
+                        component="img"
+                        src={itinerary.coverImage}
+                        alt={itinerary.title}
                         sx={{
-                          position: 'absolute',
-                          top: 12,
-                          left: 12,
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          color: 'white',
-                          fontWeight: 600,
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          position: 'relative',
+                          overflow: 'hidden',
                         }}
                       />
-                    </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 200,
+                          background: 'linear-gradient(135deg, #f5e6d3 0%, #e8d4bb 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Avatar sx={{ bgcolor: 'rgba(25, 118, 210, 0.15)', width: 80, height: 80, color: 'primary.main' }}>
+                          {getIcon(index)}
+                        </Avatar>
+                        {/* Draft Badge */}
+                        <Chip
+                          label="DRAFT"
+                          size="small"
+                          sx={{
+                            position: 'absolute',
+                            top: 12,
+                            left: 12,
+                            backgroundColor: 'rgba(0,0,0,0.6)',
+                            color: 'white',
+                            fontWeight: 600,
+                          }}
+                        />
+                      </Box>
+                    )}
 
                     <CardContent sx={{ flex: 1, pb: 1 }}>
                       {/* Title and Actions */}
