@@ -4,24 +4,18 @@ import {
   Container,
   Paper,
   Typography,
-  Chip,
   Box,
   Button,
   Stack,
   Card,
   CardContent,
   Divider,
-  Avatar,
   useMediaQuery,
   useTheme,
   IconButton,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import DownloadIcon from '@mui/icons-material/Download';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import EventNoteIcon from '@mui/icons-material/EventNote';
 import ShareIcon from '@mui/icons-material/Share';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
@@ -34,7 +28,7 @@ import { linkifyText } from '../utils/linkify';
 const ItineraryDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getItinerary, exportItinerary } = useItinerary();
+  const { getItinerary } = useItinerary();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,12 +94,6 @@ const ItineraryDetailPage: React.FC = () => {
 
   const handleEdit = () => {
     navigate(`/edit/${id}`);
-  };
-
-  const handleExport = () => {
-    if (id) {
-      exportItinerary(id);
-    }
   };
 
   const handleBack = () => {
