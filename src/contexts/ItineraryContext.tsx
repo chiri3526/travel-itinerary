@@ -102,7 +102,12 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
 
     try {
-      const newItinerary = ItineraryService.createItinerary(data);
+      // Ensure coverImage is not undefined for Firestore compatibility
+      const sanitizedData = {
+        ...data,
+        coverImage: data.coverImage || '',
+      };
+      const newItinerary = ItineraryService.createItinerary(sanitizedData);
       await StorageService.saveItinerary(newItinerary, currentUser.uid);
       dispatch({ type: 'ADD_ITINERARY', payload: newItinerary });
       dispatch({ type: 'SET_NOTIFICATION', payload: { message: '行程表を保存しました', type: 'success' } });
