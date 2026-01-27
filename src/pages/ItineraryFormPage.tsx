@@ -358,7 +358,7 @@ const ItineraryFormPage: React.FC = () => {
                 fullWidth
                 size="small"
                 sx={{ 
-                  order: { xs: 2, sm: 1 },
+                  order: { xs: 1, sm: 1 },
                 }}
               >
                 行を追加
@@ -368,25 +368,25 @@ const ItineraryFormPage: React.FC = () => {
                 direction={{ xs: 'column', sm: 'row' }}
                 spacing={1}
                 justifyContent="flex-end"
-                sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 1, sm: 2 } }}
+                sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 2, sm: 2 } }}
               >
-                <Button 
-                  variant="outlined" 
-                  onClick={handleCancel}
-                  fullWidth={false}
-                  size="small"
-                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                >
-                  キャンセル
-                </Button>
                 <Button 
                   type="submit" 
                   variant="contained"
-                  fullWidth={false}
+                  fullWidth
                   size="small"
                   sx={{ width: { xs: '100%', sm: 'auto' } }}
                 >
                   保存
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  onClick={handleCancel}
+                  fullWidth
+                  size="small"
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                >
+                  キャンセル
                 </Button>
               </Stack>
             </Stack>
