@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -12,7 +12,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { useNavigate } from 'react-router-dom';
+import { useItinerary } from '../contexts/ItineraryContext';
 import type { Itinerary } from '../types';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -25,6 +27,8 @@ interface ItineraryCardProps {
 
 const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onExport }) => {
   const navigate = useNavigate();
+  const { updateItinerary } = useItinerary();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -52,19 +56,91 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
     onExport(itinerary.id);
   };
 
+  const handleImageClick = () => {
+    if (window.innerWidth <= 768) {
+      // Only allow image change on mobile devices
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64String = e.target?.result as string;
+        // Update the itinerary with the new cover image
+        try {
+          await updateItinerary(itinerary.id, {
+            ...itinerary,
+            coverImage: base64String,
+          });
+        } catch (error) {
+          console.error('Failed to update image:', error);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {itinerary.coverImage && (
         <Box
-          component="img"
-          src={itinerary.coverImage}
-          alt={itinerary.title}
           sx={{
+            position: 'relative',
             width: '100%',
             height: 200,
-            objectFit: 'cover',
+            overflow: 'hidden',
+            cursor: window.innerWidth <= 768 ? 'pointer' : 'default',
+            '&:hover .camera-icon': {
+              opacity: window.innerWidth <= 768 ? 1 : 0,
+            },
           }}
-        />
+          onClick={handleImageClick}
+        >
+          <Box
+            component="img"
+            src={itinerary.coverImage}
+            alt={itinerary.title}
+            sx={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+          {window.innerWidth <= 768 && (
+            <Box
+              className="camera-icon"
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                opacity: 0,
+                transition: 'opacity 0.3s ease-in-out',
+              }}
+            >
+              <CameraAltIcon sx={{ color: 'white', fontSize: 40 }} />
+            </Box>
+          )}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+        </Box>
       )}
       <CardContent sx={{ flexGrow: 1, pb: 1 }}>
         <Typography 
