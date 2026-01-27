@@ -12,7 +12,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { useNavigate } from 'react-router-dom';
 import { useItinerary } from '../contexts/ItineraryContext';
 import type { Itinerary } from '../types';
@@ -56,11 +55,9 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
     onExport(itinerary.id);
   };
 
-  const handleImageClick = () => {
-    if (window.innerWidth <= 768) {
-      // Only allow image change on mobile devices
-      fileInputRef.current?.click();
-    }
+  const handleEditImageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fileInputRef.current?.click();
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,12 +93,7 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
             width: '100%',
             height: 200,
             overflow: 'hidden',
-            cursor: window.innerWidth <= 768 ? 'pointer' : 'default',
-            '&:hover .camera-icon': {
-              opacity: window.innerWidth <= 768 ? 1 : 0,
-            },
           }}
-          onClick={handleImageClick}
         >
           <Box
             component="img"
@@ -114,24 +106,22 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
             }}
           />
           {window.innerWidth <= 768 && (
-            <Box
-              className="camera-icon"
+            <IconButton
+              size="small"
+              onClick={handleEditImageClick}
               sx={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                opacity: 0,
-                transition: 'opacity 0.3s ease-in-out',
+                top: 8,
+                right: 8,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                },
               }}
             >
-              <CameraAltIcon sx={{ color: 'white', fontSize: 40 }} />
-            </Box>
+              <EditIcon fontSize="small" />
+            </IconButton>
           )}
           <input
             type="file"
