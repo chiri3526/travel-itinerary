@@ -50,7 +50,7 @@ function AppRoutes() {
         path="/new"
         element={
           <ProtectedRoute>
-            <AppLayout hideNavBar>
+            <AppLayout>
               <ItineraryFormPage />
             </AppLayout>
           </ProtectedRoute>
@@ -60,7 +60,7 @@ function AppRoutes() {
         path="/edit/:id"
         element={
           <ProtectedRoute>
-            <AppLayout hideNavBar>
+            <AppLayout>
               <ItineraryFormPage />
             </AppLayout>
           </ProtectedRoute>
