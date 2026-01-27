@@ -200,6 +200,7 @@ const ItineraryFormPage: React.FC = () => {
         startDate: startDate!.toISOString().split('T')[0],
         endDate: endDate!.toISOString().split('T')[0],
         items,
+        coverImage: '',
       };
 
       if (id) {
