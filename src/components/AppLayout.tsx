@@ -11,9 +11,10 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 interface AppLayoutProps {
   children: ReactNode;
+  hideNavBar?: boolean;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, hideNavBar = false }) => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -44,6 +45,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {!hideNavBar && (
       <AppBar position="sticky" sx={{ backgroundColor: '#fff', boxShadow: 'none', borderBottom: '1px solid #f0f0f0' }}>
         <Toolbar sx={{ px: { xs: 2, sm: 3 }, display: 'flex', justifyContent: 'space-between' }}>
           {/* Logo */}
@@ -121,6 +123,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Box>
         </Toolbar>
       </AppBar>
+      )}
       <Container 
         maxWidth={false}
         sx={{ 
