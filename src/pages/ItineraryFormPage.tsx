@@ -224,141 +224,175 @@ const ItineraryFormPage: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ja}>
-      <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 } }}>
-        <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-          <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-            {id ? '行程表を編集' : '新しい行程表を作成'}
-          </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, flex: 1 }}>
+          <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+            <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+              {id ? '行程表を編集' : '新しい行程表を作成'}
+            </Typography>
 
-          {showValidationError && Object.keys(errors).length > 0 && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setShowValidationError(false)}>
-              <Typography variant="body2" fontWeight="bold" gutterBottom>
-                入力内容に誤りがあります
-              </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                {Object.values(errors).map((error, index) => (
-                  <li key={index}>
-                    <Typography variant="body2">{error}</Typography>
-                  </li>
-                ))}
-              </Box>
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-              <TextField
-                label="旅行名"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                fullWidth
-                required
-                error={!!errors.title}
-                helperText={errors.title}
-                sx={{ mb: { xs: 2, sm: 2 } }}
-              />
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 2 }}>
-                <DatePicker
-                  label="開始日"
-                  value={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                      error: !!errors.startDate,
-                      helperText: errors.startDate,
-                    },
-                  }}
-                  sx={{ width: '100%' }}
-                />
-                <DatePicker
-                  label="終了日"
-                  value={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                      error: !!errors.endDate,
-                      helperText: errors.endDate,
-                    },
-                  }}
-                  sx={{ width: '100%' }}
-                />
-              </Stack>
-              {errors.dates && (
-                <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
-                  {errors.dates}
+            {showValidationError && Object.keys(errors).length > 0 && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setShowValidationError(false)}>
+                <Typography variant="body2" fontWeight="bold" gutterBottom>
+                  入力内容に誤りがあります
                 </Typography>
-              )}
-            </Box>
-
-            <Divider sx={{ my: 3 }} />
-
-            <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-              <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
-                行程詳細
-              </Typography>
-
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <Box sx={{ position: 'relative' }}>
-                  <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                    {items.map((item) => (
-                      <TimelineItem
-                        key={item.id}
-                        item={item}
-                        onChange={handleItemChange}
-                        onDelete={handleDeleteItem}
-                      />
-                    ))}
-                  </SortableContext>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  {Object.values(errors).map((error, index) => (
+                    <li key={index}>
+                      <Typography variant="body2">{error}</Typography>
+                    </li>
+                  ))}
                 </Box>
-              </DndContext>
+              </Alert>
+            )}
 
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                <TextField
+                  label="旅行名"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  fullWidth
+                  required
+                  error={!!errors.title}
+                  helperText={errors.title}
+                  sx={{ mb: { xs: 2, sm: 2 } }}
+                />
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 2 }}>
+                  <DatePicker
+                    label="開始日"
+                    value={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        required: true,
+                        error: !!errors.startDate,
+                        helperText: errors.startDate,
+                      },
+                    }}
+                    sx={{ width: '100%' }}
+                  />
+                  <DatePicker
+                    label="終了日"
+                    value={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        required: true,
+                        error: !!errors.endDate,
+                        helperText: errors.endDate,
+                      },
+                    }}
+                    sx={{ width: '100%' }}
+                  />
+                </Stack>
+                {errors.dates && (
+                  <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
+                    {errors.dates}
+                  </Typography>
+                )}
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
+                  行程詳細
+                </Typography>
+
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Box sx={{ position: 'relative' }}>
+                    <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                      {items.map((item) => (
+                        <TimelineItem
+                          key={item.id}
+                          item={item}
+                          onChange={handleItemChange}
+                          onDelete={handleDeleteItem}
+                        />
+                      ))}
+                    </SortableContext>
+                  </Box>
+                </DndContext>
+              </Box>
+            </Box>
+          </Paper>
+        </Container>
+
+        {/* Fixed Footer with Action Buttons */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            position: 'sticky',
+            bottom: 0,
+            backgroundColor: 'background.paper',
+            borderTop: '1px solid',
+            borderTopColor: 'divider',
+            boxShadow: '0px -2px 4px rgba(0, 0, 0, 0.1)',
+            p: { xs: 1, sm: 1.5 },
+            mx: 'auto',
+            maxWidth: 'md',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <Box sx={{ width: '100%', px: { xs: 2, sm: 3 } }}>
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={1}
+              sx={{ mb: 0 }}
+            >
               <Button
                 startIcon={<AddIcon />}
                 onClick={handleAddItem}
                 variant="contained"
                 fullWidth
+                size="small"
                 sx={{ 
-                  mt: 2,
+                  order: { xs: 2, sm: 1 },
                 }}
               >
                 行を追加
               </Button>
-            </Box>
 
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={2} 
-              justifyContent="flex-end"
-            >
-              <Button 
-                variant="outlined" 
-                onClick={handleCancel}
-                fullWidth={false}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1}
+                justifyContent="flex-end"
+                sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 1, sm: 2 } }}
               >
-                キャンセル
-              </Button>
-              <Button 
-                type="submit" 
-                variant="contained"
-                fullWidth={false}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
-                保存
-              </Button>
+                <Button 
+                  variant="outlined" 
+                  onClick={handleCancel}
+                  fullWidth={false}
+                  size="small"
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                >
+                  キャンセル
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="contained"
+                  fullWidth={false}
+                  size="small"
+                  sx={{ width: { xs: '100%', sm: 'auto' } }}
+                >
+                  保存
+                </Button>
+              </Stack>
             </Stack>
           </Box>
-        </Paper>
-      </Container>
+        </Box>
+      </Box>
     </LocalizationProvider>
   );
 };
