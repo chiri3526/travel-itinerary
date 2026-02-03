@@ -10,8 +10,11 @@ import {
   Divider,
   Stack,
   Alert,
+  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -45,6 +48,7 @@ const ItineraryFormPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [items, setItems] = useState<ItineraryItem[]>([]);
+  const [coverImage, setCoverImage] = useState<string>('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showValidationError, setShowValidationError] = useState(false);
 
@@ -56,6 +60,7 @@ const ItineraryFormPage: React.FC = () => {
         setStartDate(new Date(itinerary.startDate));
         setEndDate(new Date(itinerary.endDate));
         setItems(itinerary.items);
+        setCoverImage(itinerary.coverImage || '');
       }
     }
   }, [id, getItinerary]);
@@ -104,6 +109,39 @@ const ItineraryFormPage: React.FC = () => {
         return arrayMove(items, oldIndex, newIndex);
       });
     }
+  };
+
+  // 画像処理関数
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // ファイルサイズチェック (5MB制限)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({ ...errors, coverImage: '画像サイズは5MB以下にしてください' });
+        return;
+      }
+
+      // ファイル形式チェック
+      if (!file.type.startsWith('image/')) {
+        setErrors({ ...errors, coverImage: '画像ファイルを選択してください' });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setCoverImage(result);
+        // エラーをクリア
+        const newErrors = { ...errors };
+        delete newErrors.coverImage;
+        setErrors(newErrors);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageRemove = () => {
+    setCoverImage('');
   };
 
   const validate = (): boolean => {
@@ -200,7 +238,7 @@ const ItineraryFormPage: React.FC = () => {
         startDate: startDate!.toISOString().split('T')[0],
         endDate: endDate!.toISOString().split('T')[0],
         items,
-        coverImage: '',
+        coverImage,
       };
 
       if (id) {
@@ -295,6 +333,91 @@ const ItineraryFormPage: React.FC = () => {
                     {errors.dates}
                   </Typography>
                 )}
+              </Box>
+
+              {/* 画像アップロード */}
+              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
+                  サムネイル画像
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {coverImage ? (
+                    <Box sx={{ position: 'relative', display: 'inline-block', maxWidth: 300 }}>
+                      <img
+                        src={coverImage}
+                        alt="サムネイル"
+                        style={{
+                          width: '100%',
+                          height: 200,
+                          objectFit: 'cover',
+                          borderRadius: 8,
+                          border: '1px solid #ddd'
+                        }}
+                      />
+                      <IconButton
+                        onClick={handleImageRemove}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          bgcolor: 'rgba(0,0,0,0.5)',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+                        }}
+                        size="small"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <Box
+                      sx={{
+                        width: '100%',
+                        maxWidth: 300,
+                        height: 200,
+                        border: '2px dashed #ddd',
+                        borderRadius: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.50' }
+                      }}
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                    >
+                      <PhotoCameraIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        画像をアップロード
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        JPG, PNG (最大5MB)
+                      </Typography>
+                    </Box>
+                  )}
+                  <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
+                  {!coverImage && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<PhotoCameraIcon />}
+                      onClick={() => document.getElementById('image-upload')?.click()}
+                      sx={{ maxWidth: 200 }}
+                    >
+                      画像を選択
+                    </Button>
+                  )}
+                  {errors.coverImage && (
+                    <Typography color="error" variant="caption">
+                      {errors.coverImage}
+                    </Typography>
+                  )}
+                </Box>
               </Box>
 
               <Divider sx={{ my: 3 }} />

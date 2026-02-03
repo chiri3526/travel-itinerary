@@ -245,9 +245,21 @@ const ItineraryListPage: React.FC = () => {
                           overflow: 'hidden',
                         }}
                       >
-                        <Avatar sx={{ bgcolor: 'rgba(25, 118, 210, 0.15)', width: 80, height: 80, color: 'primary.main' }}>
-                          {getIcon(index)}
-                        </Avatar>
+                        {itinerary.coverImage ? (
+                          <img
+                            src={itinerary.coverImage}
+                            alt={itinerary.title}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        ) : (
+                          <Avatar sx={{ bgcolor: 'rgba(25, 118, 210, 0.15)', width: 80, height: 80, color: 'primary.main' }}>
+                            {getIcon(index)}
+                          </Avatar>
+                        )}
                         {/* Draft Badge */}
                         <Chip
                           label="DRAFT"
