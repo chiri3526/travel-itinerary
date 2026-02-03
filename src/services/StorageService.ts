@@ -14,8 +14,26 @@ import type { Itinerary } from '../types';
 
 class StorageService {
   private readonly COLLECTION_NAME = 'itineraries';
+  private cache: Map<string, { data: Itinerary[]; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5分
+
+  private getCacheKey(userId: string): string {
+    return `itineraries_${userId}`;
+  }
+
+  private isValidCache(timestamp: number): boolean {
+    return Date.now() - timestamp < this.CACHE_DURATION;
+  }
 
   async getAllItineraries(userId: string): Promise<Itinerary[]> {
+    const cacheKey = this.getCacheKey(userId);
+    const cached = this.cache.get(cacheKey);
+    
+    // キャッシュが有効な場合は返す
+    if (cached && this.isValidCache(cached.timestamp)) {
+      return cached.data;
+    }
+
     try {
       const q = query(
         collection(db, this.COLLECTION_NAME),
@@ -36,8 +54,13 @@ class StorageService {
           items: data.items || [],
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
-          coverImage: data.coverImage,
         });
+      });
+      
+      // キャッシュに保存
+      this.cache.set(cacheKey, {
+        data: itineraries,
+        timestamp: Date.now()
       });
       
       return itineraries;
@@ -45,6 +68,11 @@ class StorageService {
       console.error('Failed to load itineraries:', error);
       throw new Error('データの読み込みに失敗しました。');
     }
+  }
+
+  private invalidateCache(userId: string): void {
+    const cacheKey = this.getCacheKey(userId);
+    this.cache.delete(cacheKey);
   }
 
   async getItinerary(id: string, userId: string): Promise<Itinerary | null> {
@@ -71,7 +99,6 @@ class StorageService {
         items: data.items || [],
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
-        coverImage: data.coverImage,
       };
     } catch (error) {
       console.error('Failed to load itinerary:', error);
@@ -86,6 +113,9 @@ class StorageService {
         ...itinerary,
         userId,
       });
+      
+      // キャッシュを無効化
+      this.invalidateCache(userId);
     } catch (error) {
       console.error('Failed to save itinerary:', error);
       throw new Error('データの保存に失敗しました。');
@@ -102,6 +132,9 @@ class StorageService {
       
       const docRef = doc(db, this.COLLECTION_NAME, id);
       await deleteDoc(docRef);
+      
+      // キャッシュを無効化
+      this.invalidateCache(userId);
     } catch (error) {
       console.error('Failed to delete itinerary:', error);
       throw new Error('データの削除に失敗しました。');
@@ -115,6 +148,9 @@ class StorageService {
         deleteDoc(doc(db, this.COLLECTION_NAME, itinerary.id))
       );
       await Promise.all(deletePromises);
+      
+      // キャッシュを無効化
+      this.invalidateCache(userId);
     } catch (error) {
       console.error('Failed to clear all itineraries:', error);
       throw new Error('データのクリアに失敗しました。');

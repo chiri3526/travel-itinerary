@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
 import {
   Typography,
   Box,
@@ -65,23 +65,23 @@ const ItineraryListPage: React.FC = () => {
     }
   };
 
-  const getIcon = (index: number) => {
+  const getIcon = useCallback((index: number) => {
     const icons = [FlightTakeoffIcon, DirectionsBoatIcon, HomeIcon];
     const Icon = icons[index % icons.length];
     return <Icon />;
-  };
+  }, []);
 
-  const calculateDays = (startDate: string, endDate: string): number => {
+  const calculateDays = useCallback((startDate: string, endDate: string): number => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays + 1;
-  };
+  }, []);
 
-  const calculateTotalBudget = (itinerary: Itinerary): number => {
+  const calculateTotalBudget = useCallback((itinerary: Itinerary): number => {
     return itinerary.items.reduce((sum, item) => sum + item.amount, 0);
-  };
+  }, []);
 
   const filteredItineraries = useMemo(() => {
     return state.itineraries.filter((itinerary) =>

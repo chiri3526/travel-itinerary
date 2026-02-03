@@ -105,7 +105,7 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
               objectFit: 'cover',
             }}
           />
-          {window.innerWidth <= 768 && (
+          {itinerary.coverImage && (
             <IconButton
               size="small"
               onClick={handleEditImageClick}
