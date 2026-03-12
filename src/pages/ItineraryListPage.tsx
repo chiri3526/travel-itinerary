@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -27,8 +28,9 @@ import type { Itinerary } from '../types';
 
 const ItineraryListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { state, deleteItinerary, importItinerary } = useItinerary();
+  const { state, deleteItinerary, importFromMarkdown, downloadTemplate } = useItinerary();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mdFileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const itemsPerPage = 3;
@@ -37,16 +39,30 @@ const ItineraryListPage: React.FC = () => {
     navigate('/new');
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleMdImportClick = () => {
+    mdFileInputRef.current?.click();
+  };
+
+  const handleTemplateDownload = () => {
+    downloadTemplate();
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      await importItinerary(file);
+      await importFromMarkdown(file);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleMdFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await importFromMarkdown(file);
+      if (mdFileInputRef.current) {
+        mdFileInputRef.current.value = '';
       }
     }
   };
@@ -139,10 +155,18 @@ const ItineraryListPage: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<UploadFileIcon />}
-              onClick={handleImportClick}
+              onClick={handleMdImportClick}
               sx={{ fontSize: '0.875rem', py: 1, px: 2, display: { xs: 'none', sm: 'inline-flex' } }}
             >
-              インポート
+              MDインポート
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleTemplateDownload}
+              sx={{ fontSize: '0.875rem', py: 1, px: 2, display: { xs: 'none', sm: 'inline-flex' } }}
+            >
+              テンプレート
             </Button>
             <Button
               variant="contained"
@@ -161,6 +185,13 @@ const ItineraryListPage: React.FC = () => {
           accept=".json"
           style={{ display: 'none' }}
           onChange={handleFileChange}
+        />
+        <input
+          ref={mdFileInputRef}
+          type="file"
+          accept=".md,.markdown"
+          style={{ display: 'none' }}
+          onChange={handleMdFileChange}
         />
 
         {/* Search Bar */}

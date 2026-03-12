@@ -29,7 +29,10 @@ interface ItineraryContextType {
   deleteItinerary: (id: string) => Promise<void>;
   getItinerary: (id: string) => Itinerary | undefined;
   exportItinerary: (id: string) => void;
+  exportItineraryAsMarkdown: (id: string) => void;
   importItinerary: (file: File) => Promise<void>;
+  importFromMarkdown: (file: File) => Promise<void>;
+  downloadTemplate: () => void;
   clearNotification: () => void;
 }
 
@@ -189,6 +192,47 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
+  const exportItineraryAsMarkdown = (id: string) => {
+    try {
+      const itinerary = getItinerary(id);
+      if (!itinerary) {
+        throw new Error('行程表が見つかりません');
+      }
+      FileService.exportToMarkdown(itinerary);
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'Markdown形式でエクスポートしました', type: 'success' } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'エクスポートに失敗しました';
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message, type: 'error' } });
+    }
+  };
+
+  const importFromMarkdown = async (file: File) => {
+    if (!currentUser) {
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'ログインが必要です', type: 'error' } });
+      return;
+    }
+
+    try {
+      const itinerary = await FileService.importFromMarkdown(file);
+      await StorageService.saveItinerary(itinerary, currentUser.uid);
+      dispatch({ type: 'ADD_ITINERARY', payload: itinerary });
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'Markdownファイルからインポートしました', type: 'success' } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'インポートに失敗しました';
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message, type: 'error' } });
+    }
+  };
+
+  const downloadTemplate = () => {
+    try {
+      FileService.downloadTemplate();
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message: 'テンプレートをダウンロードしました', type: 'success' } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'ダウンロードに失敗しました';
+      dispatch({ type: 'SET_NOTIFICATION', payload: { message, type: 'error' } });
+    }
+  };
+
   const clearNotification = () => {
     dispatch({ type: 'SET_NOTIFICATION', payload: null });
   };
@@ -202,7 +246,10 @@ export const ItineraryProvider: React.FC<{ children: ReactNode }> = ({ children 
         deleteItinerary,
         getItinerary,
         exportItinerary,
+        exportItineraryAsMarkdown,
         importItinerary,
+        importFromMarkdown,
+        downloadTemplate,
         clearNotification,
       }}
     >
