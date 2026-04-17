@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
-import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Divider,
-  Alert,
-  Link,
-} from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
-import { useNavigate } from 'react-router-dom';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Divider,
+  Link,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import { useState } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
@@ -22,16 +24,16 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
 
     try {
       await login(email, password);
       navigate('/');
-    } catch (err) {
-      setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+    } catch {
+      setError('ログインできませんでした。メールアドレスとパスワードをご確認ください。');
     } finally {
       setLoading(false);
     }
@@ -44,83 +46,112 @@ const LoginPage: React.FC = () => {
     try {
       await loginWithGoogle();
       navigate('/');
-    } catch (err) {
-      setError('Googleログインに失敗しました。');
+    } catch {
+      setError('Googleでのログインに失敗しました。時間をおいてお試しください。');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" align="center" gutterBottom fontWeight={600}>
-          TravelFlow
-        </Typography>
-        <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 4 }}>
-          旅行行程表管理システム
-        </Typography>
+    <Container sx={{ py: { xs: 3, md: 6 } }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 0.92fr' },
+          gap: 3,
+          alignItems: 'stretch',
+        }}
+      >
+        <Card sx={{ minHeight: { lg: 560 } }}>
+          <CardContent sx={{ p: { xs: 3, md: 5 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="body2" color="text.secondary">
+              保存した旅程を開いて編集できます。
+            </Typography>
+            <Typography variant="h2" sx={{ fontSize: { xs: '2rem', md: '2.8rem' }, mt: 1.5 }}>
+              保存した旅程を
+              <br />
+              開きます。
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 2, maxWidth: 520, lineHeight: 1.9 }}>
+              旅程、予算、画像を前回の状態のまま確認できます。
+            </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+            <Stack spacing={1.5} sx={{ mt: 'auto', pt: 5 }}>
+              {[
+                '予定を時系列で確認できます。',
+                'Markdownの取り込みとテンプレート保存に対応しています。',
+                'スマートフォンでも確認できます。',
+              ].map((point) => (
+                <Box
+                  key={point}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1.5,
+                    backgroundColor: 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  <Typography variant="body2">{point}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
 
-        <Box component="form" onSubmit={handleSubmit}>
-          <TextField
-            label="メールアドレス"
-            type="email"
-            fullWidth
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="パスワード"
-            type="password"
-            fullWidth
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 3 }}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            disabled={loading}
-            sx={{ mb: 2 }}
-          >
-            ログイン
-          </Button>
-        </Box>
+        <Card sx={{ alignSelf: 'center' }}>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Typography variant="h4">ログイン</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
+              保存していた旅の内容を開きます。
+            </Typography>
 
-        <Divider sx={{ my: 3 }}>または</Divider>
+            {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
 
-        <Button
-          variant="outlined"
-          fullWidth
-          size="large"
-          startIcon={<GoogleIcon />}
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          sx={{ mb: 2 }}
-        >
-          Googleでログイン
-        </Button>
+            <Stack component="form" spacing={2} onSubmit={handleSubmit}>
+              <TextField
+                label="メールアドレス"
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <TextField
+                label="パスワード"
+                type="password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <Button type="submit" variant="contained" size="large" disabled={loading}>
+                ログインする
+              </Button>
+            </Stack>
 
-        <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            アカウントをお持ちでない方は{' '}
-            <Link href="/signup" underline="hover" sx={{ cursor: 'pointer' }}>
-              新規登録
-            </Link>
-          </Typography>
-        </Box>
-      </Paper>
+            <Divider sx={{ my: 3 }}>または</Divider>
+
+            <Button
+              variant="outlined"
+              size="large"
+              fullWidth
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
+              Googleでログイン
+            </Button>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
+              はじめての方は{' '}
+              <Link component={RouterLink} to="/signup" underline="hover">
+                新規登録
+              </Link>
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
     </Container>
   );
 };

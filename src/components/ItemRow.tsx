@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { TableRow, TableCell, TextField, IconButton } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
+import { IconButton, TableCell, TableRow, TextField } from '@mui/material';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useState } from 'react';
 import type { ItineraryItem } from '../types';
 
 interface ItemRowProps {
@@ -12,126 +12,102 @@ interface ItemRowProps {
   onDelete: (id: string) => void;
 }
 
-const ItemRow: React.FC<ItemRowProps> = ({ item, onChange, onDelete }) => {
-  const [amountError, setAmountError] = useState<string>('');
-  
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+const ItemRow = ({ item, onChange, onDelete }: ItemRowProps) => {
+  const [amountError, setAmountError] = useState('');
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
   };
 
   const handleAmountChange = (value: string) => {
-    // Allow empty string for clearing the field
     if (value === '') {
       setAmountError('');
       onChange(item.id, 'amount', 0);
       return;
     }
 
-    const numValue = Number(value);
-    
-    if (isNaN(numValue)) {
-      setAmountError('数値を入力してください');
+    const amount = Number(value);
+    if (Number.isNaN(amount)) {
+      setAmountError('数字で入力してください');
       return;
     }
-    
-    if (numValue < 0) {
-      setAmountError('0以上の値を入力してください');
+    if (amount < 0) {
+      setAmountError('0 以上を入力してください');
       return;
     }
-
-    if (!Number.isFinite(numValue)) {
-      setAmountError('有効な数値を入力してください');
+    if (!Number.isFinite(amount)) {
+      setAmountError('有効な金額を入力してください');
       return;
     }
 
     setAmountError('');
-    onChange(item.id, 'amount', numValue);
+    onChange(item.id, 'amount', amount);
   };
 
   return (
     <TableRow ref={setNodeRef} style={style}>
-      <TableCell sx={{ px: { xs: 0.5, sm: 1 }, width: 40 }}>
-        <IconButton
-          size="small"
-          {...attributes}
-          {...listeners}
-          sx={{ 
-            cursor: isDragging ? 'grabbing' : 'grab',
-            color: 'text.secondary',
-            '&:hover': { color: 'primary.main' }
-          }}
-        >
-          <DragIndicatorIcon fontSize="small" />
+      <TableCell sx={{ width: 52 }}>
+        <IconButton {...attributes} {...listeners} sx={{ cursor: isDragging ? 'grabbing' : 'grab' }}>
+          <DragIndicatorRoundedIcon fontSize="small" />
         </IconButton>
       </TableCell>
-      <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+      <TableCell>
         <TextField
           type="date"
-          value={item.date}
-          onChange={(e) => onChange(item.id, 'date', e.target.value)}
-          size="small"
           fullWidth
-          sx={{ minWidth: { xs: 110, sm: 140 } }}
+          size="small"
+          value={item.date}
+          onChange={(event) => onChange(item.id, 'date', event.target.value)}
         />
       </TableCell>
-      <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+      <TableCell>
         <TextField
           type="time"
+          fullWidth
+          size="small"
           value={item.time}
-          onChange={(e) => onChange(item.id, 'time', e.target.value)}
-          size="small"
-          fullWidth
-          sx={{ minWidth: { xs: 90, sm: 120 } }}
+          onChange={(event) => onChange(item.id, 'time', event.target.value)}
         />
       </TableCell>
-      <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+      <TableCell>
         <TextField
-          value={item.content}
-          onChange={(e) => onChange(item.id, 'content', e.target.value)}
-          placeholder="内容"
-          size="small"
           fullWidth
-          sx={{ minWidth: { xs: 140, sm: 180 } }}
+          size="small"
+          value={item.content}
+          placeholder="予定"
+          onChange={(event) => onChange(item.id, 'content', event.target.value)}
         />
       </TableCell>
-      <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+      <TableCell>
         <TextField
           type="number"
-          value={item.amount}
-          onChange={(e) => handleAmountChange(e.target.value)}
-          placeholder="金額"
-          size="small"
           fullWidth
-          error={!!amountError}
+          size="small"
+          value={item.amount || ''}
+          placeholder="0"
+          onChange={(event) => handleAmountChange(event.target.value)}
+          error={Boolean(amountError)}
           helperText={amountError}
           inputProps={{ min: 0 }}
-          sx={{ minWidth: { xs: 90, sm: 120 } }}
         />
       </TableCell>
-      <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+      <TableCell>
         <TextField
-          value={item.note}
-          onChange={(e) => onChange(item.id, 'note', e.target.value)}
-          placeholder="備考"
-          size="small"
           fullWidth
-          sx={{ minWidth: { xs: 110, sm: 140 } }}
+          size="small"
+          value={item.note}
+          placeholder="メモ"
+          onChange={(event) => onChange(item.id, 'note', event.target.value)}
         />
       </TableCell>
-      <TableCell sx={{ px: { xs: 0.5, sm: 2 } }}>
-        <IconButton onClick={() => onDelete(item.id)} color="error" size="small">
-          <DeleteIcon fontSize="small" />
+      <TableCell sx={{ width: 64 }}>
+        <IconButton color="error" onClick={() => onDelete(item.id)}>
+          <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       </TableCell>
     </TableRow>

@@ -1,22 +1,25 @@
-import React, { useRef } from 'react';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PhotoCameraBackOutlinedIcon from '@mui/icons-material/PhotoCameraBackOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import {
+  alpha,
+  Box,
   Card,
-  CardContent,
   CardActions,
-  Typography,
+  CardContent,
   Chip,
   IconButton,
-  Box,
+  Stack,
+  Typography,
 } from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DownloadIcon from '@mui/icons-material/Download';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useItinerary } from '../contexts/ItineraryContext';
 import type { Itinerary } from '../types';
-import { format } from 'date-fns';
-import { ja } from 'date-fns/locale';
 
 interface ItineraryCardProps {
   itinerary: Itinerary;
@@ -24,26 +27,18 @@ interface ItineraryCardProps {
   onExport: (id: string) => void;
 }
 
-const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onExport }) => {
+const formatDate = (value: string) => {
+  try {
+    return format(new Date(value), 'yyyy年M月d日', { locale: ja });
+  } catch {
+    return value;
+  }
+};
+
+const ItineraryCard = ({ itinerary, onDelete, onExport }: ItineraryCardProps) => {
   const navigate = useNavigate();
   const { updateItinerary } = useItinerary();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return format(new Date(dateStr), 'yyyy年M月d日', { locale: ja });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const handleDetail = () => {
-    navigate(`/detail/${itinerary.id}`);
-  };
-
-  const handleEdit = () => {
-    navigate(`/edit/${itinerary.id}`);
-  };
 
   const handleDelete = () => {
     if (window.confirm(`「${itinerary.title}」を削除しますか？`)) {
@@ -51,130 +46,101 @@ const ItineraryCard: React.FC<ItineraryCardProps> = ({ itinerary, onDelete, onEx
     }
   };
 
-  const handleExport = () => {
-    onExport(itinerary.id);
-  };
-
-  const handleEditImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    fileInputRef.current?.click();
-  };
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64String = e.target?.result as string;
-        // Update the itinerary with the new cover image
-        try {
-          await updateItinerary(itinerary.id, {
-            ...itinerary,
-            coverImage: base64String,
-          });
-        } catch (error) {
-          console.error('Failed to update image:', error);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) {
+      return;
     }
-    // Reset the input
+
+    const reader = new FileReader();
+    reader.onload = async (loadEvent) => {
+      const result = loadEvent.target?.result as string;
+      await updateItinerary(itinerary.id, { coverImage: result });
+    };
+    reader.readAsDataURL(file);
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   return (
-    <Card elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {itinerary.coverImage && (
-        <Box
+    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          height: 180,
+          background: itinerary.coverImage
+            ? `center / cover no-repeat url(${itinerary.coverImage})`
+            : `linear-gradient(145deg, ${alpha('#EFE0C7', 0.94)}, ${alpha('#D7B89A', 0.86)})`,
+          position: 'relative',
+          p: 2,
+        }}
+      >
+        {!itinerary.coverImage && (
+          <Stack spacing={1} sx={{ maxWidth: 180 }}>
+            <Chip label="旅の下書き" size="small" sx={{ width: 'fit-content', bgcolor: alpha('#fff', 0.72) }} />
+            <Typography variant="h6">{itinerary.title}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              ページをめくるように予定を育てられます。
+            </Typography>
+          </Stack>
+        )}
+        <IconButton
+          size="small"
+          onClick={(event) => {
+            event.stopPropagation();
+            fileInputRef.current?.click();
+          }}
           sx={{
-            position: 'relative',
-            width: '100%',
-            height: 200,
-            overflow: 'hidden',
+            position: 'absolute',
+            right: 12,
+            bottom: 12,
+            bgcolor: alpha('#fff', 0.82),
           }}
         >
-          <Box
-            component="img"
-            src={itinerary.coverImage}
-            alt={itinerary.title}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
-          {itinerary.coverImage && (
-            <IconButton
-              size="small"
-              onClick={handleEditImageClick}
-              sx={{
-                position: 'absolute',
-                top: 8,
-                right: 8,
-                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                },
-              }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-        </Box>
-      )}
-      <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-        <Typography 
-          variant="h6" 
-          component="div" 
-          gutterBottom
-          sx={{ 
-            fontSize: { xs: '1rem', sm: '1.125rem', md: '1.25rem' },
-            wordBreak: 'break-word'
-          }}
-        >
-          {itinerary.title}
-        </Typography>
-        <Box sx={{ mb: 1 }}>
+          <PhotoCameraBackOutlinedIcon fontSize="small" />
+        </IconButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+      </Box>
+
+      <CardContent sx={{ flex: 1 }}>
+        <Stack spacing={1.25}>
+          <Typography variant="h6">{itinerary.title}</Typography>
           <Chip
-            label={`${formatDate(itinerary.startDate)} 〜 ${formatDate(itinerary.endDate)}`}
-            size="small"
-            color="primary"
+            label={`${formatDate(itinerary.startDate)} - ${formatDate(itinerary.endDate)}`}
             variant="outlined"
-            sx={{ 
-              fontSize: { xs: '0.65rem', sm: '0.75rem' },
-              height: { xs: 24, sm: 28 }
-            }}
+            size="small"
+            sx={{ width: 'fit-content' }}
           />
-        </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-          作成日: {formatDate(itinerary.createdAt.split('T')[0])}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-          行程数: {itinerary.items.length}件
-        </Typography>
+          <Typography variant="body2" color="text.secondary">
+            予定数 {itinerary.items.length} 件
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            作成日 {formatDate(itinerary.createdAt)}
+          </Typography>
+        </Stack>
       </CardContent>
-      <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-        <IconButton size="small" onClick={handleDetail} title="詳細">
-          <VisibilityIcon fontSize="small" />
-        </IconButton>
-        <IconButton size="small" onClick={handleEdit} title="編集">
-          <EditIcon fontSize="small" />
-        </IconButton>
-        <IconButton size="small" onClick={handleExport} title="エクスポート">
-          <DownloadIcon fontSize="small" />
-        </IconButton>
-        <IconButton size="small" onClick={handleDelete} color="error" title="削除">
-          <DeleteIcon fontSize="small" />
+
+      <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
+        <Stack direction="row" spacing={0.5}>
+          <IconButton size="small" onClick={() => navigate(`/detail/${itinerary.id}`)}>
+            <VisibilityOutlinedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => navigate(`/edit/${itinerary.id}`)}>
+            <EditOutlinedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={() => onExport(itinerary.id)}>
+            <DownloadRoundedIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+        <IconButton size="small" color="error" onClick={handleDelete}>
+          <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       </CardActions>
     </Card>

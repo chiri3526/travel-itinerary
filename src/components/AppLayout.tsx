@@ -1,21 +1,24 @@
-import React, { type ReactNode } from 'react';
-import { Container, Box } from '@mui/material';
+import { Box, Container, type SxProps, type Theme } from '@mui/material';
+import type { ReactNode } from 'react';
 
 interface AppLayoutProps {
   children: ReactNode;
+  sx?: SxProps<Theme>;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+const AppLayout = ({ children, sx }: AppLayoutProps) => {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Container 
-        maxWidth={false}
-        sx={{ 
-          mt: { xs: 2, sm: 3, md: 4 }, 
-          mb: { xs: 2, sm: 3, md: 4 }, 
-          px: 0,
-          flexGrow: 1,
-          width: '100%'
+    <Box
+      sx={{
+        minHeight: '100vh',
+        py: { xs: 2, sm: 3, md: 4 },
+      }}
+    >
+      <Container
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          ...sx,
         }}
       >
         {children}

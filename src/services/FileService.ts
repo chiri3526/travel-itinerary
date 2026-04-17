@@ -1,5 +1,21 @@
-import type { Itinerary } from '../types';
 import { format } from 'date-fns';
+import type { Itinerary } from '../types';
+import { getSafeCoverImage } from '../utils/coverImage';
+
+const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_ITEMS = 200;
+const MAX_TITLE_LENGTH = 100;
+const MAX_CONTENT_LENGTH = 200;
+const MAX_NOTE_LENGTH = 500;
+
+type ImportedItem = {
+  id: string;
+  date: string;
+  time: string;
+  content: string;
+  amount: number;
+  note: string;
+};
 
 class FileService {
   exportToJSON(itinerary: Itinerary): void {
@@ -7,9 +23,9 @@ class FileService {
       const jsonString = JSON.stringify(itinerary, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      
-      const fileName = `${itinerary.title}_${format(new Date(), 'yyyyMMdd')}.json`;
-      
+
+      const fileName = `${this.buildSafeFileName(itinerary.title)}_${format(new Date(), 'yyyyMMdd')}.json`;
+
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
@@ -19,152 +35,54 @@ class FileService {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export failed:', error);
-      throw new Error('エクスポートに失敗しました。ブラウザの設定を確認してください。');
+      throw new Error('JSON のエクスポートに失敗しました。');
     }
   }
 
   async importFromJSON(file: File): Promise<Itinerary> {
     return new Promise((resolve, reject) => {
-      // Check file type
-      if (!file.name.endsWith('.json')) {
-        reject(new Error('JSONファイルを選択してください。'));
+      if (!file.name.toLowerCase().endsWith('.json')) {
+        reject(new Error('JSON ファイルを選択してください。'));
         return;
       }
 
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        reject(new Error('ファイルサイズが大きすぎます（最大10MB）。'));
+      if (file.size > MAX_IMPORT_FILE_BYTES) {
+        reject(new Error('ファイルサイズは 10MB 以下にしてください。'));
         return;
       }
 
       const reader = new FileReader();
-      
       reader.onload = (event) => {
         try {
-          const jsonString = event.target?.result as string;
-          
-          if (!jsonString || jsonString.trim() === '') {
-            reject(new Error('ファイルが空です。'));
+          const jsonString = event.target?.result;
+          if (typeof jsonString !== 'string' || jsonString.trim() === '') {
+            reject(new Error('JSON ファイルが空です。'));
             return;
           }
 
           const data = JSON.parse(jsonString);
-          
-          if (this.validateImportData(data)) {
-            resolve(data as Itinerary);
-          } else {
-            reject(new Error('ファイル形式が正しくありません。有効な行程表ファイルを選択してください。'));
-          }
+          resolve(this.normalizeImportedItinerary(data));
         } catch (error) {
           if (error instanceof SyntaxError) {
-            reject(new Error('JSONファイルの形式が正しくありません。ファイルが破損している可能性があります。'));
-          } else {
-            reject(new Error('ファイルの読み込みに失敗しました。'));
+            reject(new Error('JSON の形式が正しくありません。'));
+            return;
           }
+          reject(error instanceof Error ? error : new Error('JSON の読み込みに失敗しました。'));
         }
       };
-      
-      reader.onerror = () => {
-        reject(new Error('ファイルの読み込み中にエラーが発生しました。もう一度お試しください。'));
-      };
-      
+      reader.onerror = () => reject(new Error('JSON ファイルを読み込めませんでした。'));
       reader.readAsText(file);
     });
   }
 
-  validateImportData(data: any): boolean {
-    if (!data || typeof data !== 'object') {
-      return false;
-    }
-
-    // Check required fields
-    const requiredFields = ['id', 'title', 'startDate', 'endDate', 'items', 'createdAt', 'updatedAt'];
-    for (const field of requiredFields) {
-      if (!(field in data)) {
-        console.error(`Missing required field: ${field}`);
-        return false;
-      }
-    }
-
-    // Validate field types
-    if (typeof data.id !== 'string' || data.id.trim() === '') {
-      console.error('Invalid id field');
-      return false;
-    }
-    if (typeof data.title !== 'string' || data.title.trim() === '') {
-      console.error('Invalid title field');
-      return false;
-    }
-    if (typeof data.startDate !== 'string' || data.startDate.trim() === '') {
-      console.error('Invalid startDate field');
-      return false;
-    }
-    if (typeof data.endDate !== 'string' || data.endDate.trim() === '') {
-      console.error('Invalid endDate field');
-      return false;
-    }
-    if (!Array.isArray(data.items)) {
-      console.error('Invalid items field - must be an array');
-      return false;
-    }
-    if (typeof data.createdAt !== 'string' || data.createdAt.trim() === '') {
-      console.error('Invalid createdAt field');
-      return false;
-    }
-    if (typeof data.updatedAt !== 'string' || data.updatedAt.trim() === '') {
-      console.error('Invalid updatedAt field');
-      return false;
-    }
-
-    // Validate date formats
-    try {
-      const startDate = new Date(data.startDate);
-      const endDate = new Date(data.endDate);
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        console.error('Invalid date format');
-        return false;
-      }
-    } catch {
-      console.error('Date parsing failed');
-      return false;
-    }
-
-    // Validate items array
-    for (let i = 0; i < data.items.length; i++) {
-      const item = data.items[i];
-      if (!item || typeof item !== 'object') {
-        console.error(`Invalid item at index ${i}`);
-        return false;
-      }
-      if (typeof item.id !== 'string' ||
-          typeof item.date !== 'string' ||
-          typeof item.time !== 'string' ||
-          typeof item.content !== 'string' ||
-          typeof item.amount !== 'number' ||
-          typeof item.note !== 'string') {
-        console.error(`Invalid item fields at index ${i}`);
-        return false;
-      }
-      
-      // Validate amount is not negative
-      if (item.amount < 0) {
-        console.error(`Negative amount at item index ${i}`);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  // MD形式でエクスポート
   exportToMarkdown(itinerary: Itinerary): void {
     try {
       const markdown = this.convertToMarkdown(itinerary);
       const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      
-      const fileName = `${itinerary.title}_${format(new Date(), 'yyyyMMdd')}.md`;
-      
+
+      const fileName = `${this.buildSafeFileName(itinerary.title)}_${format(new Date(), 'yyyyMMdd')}.md`;
+
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
@@ -174,58 +92,41 @@ class FileService {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export failed:', error);
-      throw new Error('エクスポートに失敗しました。');
+      throw new Error('Markdown のエクスポートに失敗しました。');
     }
   }
 
-  // テンプレートMDファイルをダウンロード
   downloadTemplate(): void {
-    const template = `# 旅行名
+    const template = `# 旅行プラン
 
-**開始日**: 2024-01-01
-**終了日**: 2024-01-03
+**開始日**: 2026-04-17
+**終了日**: 2026-04-19
 
 ---
 
-## 2024-01-01
+## 2026-04-17
 
 ### 09:00 | 出発
 - **金額**: 0
-- **備考**: 自宅から出発
+- **メモ**: 自宅から空港へ移動
 
 ### 12:00 | 昼食
 - **金額**: 1500
-- **備考**: 駅前のレストラン
+- **メモ**: 駅前のレストラン
 
 ---
 
-## 2024-01-02
+## 2026-04-18
 
 ### 10:00 | 観光
 - **金額**: 2000
-- **備考**: 入場料
-
-### 18:00 | 夕食
-- **金額**: 3000
-- **備考**: ホテル近くの居酒屋
-
----
-
-## 使い方
-
-1. 「# 旅行名」の後に旅行のタイトルを記入
-2. 「**開始日**」と「**終了日**」を YYYY-MM-DD 形式で記入
-3. 各日付ごとに「## YYYY-MM-DD」の形式で日付を記入
-4. 各項目は「### HH:MM | 内容」の形式で記入
-5. 金額と備考は「- **金額**: 数値」「- **備考**: テキスト」の形式で記入
-6. 金額や備考が不要な場合は省略可能
+- **メモ**: 入場チケットを事前購入
 `;
 
     const blob = new Blob([template], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    
     const fileName = `itinerary_template_${format(new Date(), 'yyyyMMdd')}.md`;
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
@@ -235,140 +136,234 @@ class FileService {
     URL.revokeObjectURL(url);
   }
 
-  // ItineraryをMarkdown形式に変換
-  private convertToMarkdown(itinerary: Itinerary): string {
-    let markdown = `# ${itinerary.title}\n\n`;
-    markdown += `**開始日**: ${itinerary.startDate}\n`;
-    markdown += `**終了日**: ${itinerary.endDate}\n\n`;
-    markdown += `---\n\n`;
-
-    // 日付ごとにグループ化
-    const itemsByDate = new Map<string, typeof itinerary.items>();
-    itinerary.items.forEach(item => {
-      if (!itemsByDate.has(item.date)) {
-        itemsByDate.set(item.date, []);
-      }
-      itemsByDate.get(item.date)!.push(item);
-    });
-
-    // 日付順にソート
-    const sortedDates = Array.from(itemsByDate.keys()).sort();
-
-    sortedDates.forEach(date => {
-      markdown += `## ${date}\n\n`;
-      const items = itemsByDate.get(date)!;
-      
-      // 時間順にソート
-      items.sort((a, b) => a.time.localeCompare(b.time));
-
-      items.forEach(item => {
-        markdown += `### ${item.time || '時間未設定'} | ${item.content || '内容未設定'}\n`;
-        if (item.amount > 0) {
-          markdown += `- **金額**: ${item.amount}\n`;
-        }
-        if (item.note) {
-          markdown += `- **備考**: ${item.note}\n`;
-        }
-        markdown += `\n`;
-      });
-
-      markdown += `---\n\n`;
-    });
-
-    return markdown;
-  }
-
-  // MD形式からインポート
   async importFromMarkdown(file: File): Promise<Itinerary> {
     return new Promise((resolve, reject) => {
-      // Check file type
-      if (!file.name.endsWith('.md') && !file.name.endsWith('.markdown')) {
-        reject(new Error('Markdownファイル（.md）を選択してください。'));
+      const lowerName = file.name.toLowerCase();
+      if (!lowerName.endsWith('.md') && !lowerName.endsWith('.markdown')) {
+        reject(new Error('Markdown ファイルを選択してください。'));
         return;
       }
 
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        reject(new Error('ファイルサイズが大きすぎます（最大10MB）。'));
+      if (file.size > MAX_IMPORT_FILE_BYTES) {
+        reject(new Error('ファイルサイズは 10MB 以下にしてください。'));
         return;
       }
 
       const reader = new FileReader();
-      
       reader.onload = (event) => {
         try {
-          const markdown = event.target?.result as string;
-          
-          if (!markdown || markdown.trim() === '') {
-            reject(new Error('ファイルが空です。'));
+          const markdown = event.target?.result;
+          if (typeof markdown !== 'string' || markdown.trim() === '') {
+            reject(new Error('Markdown ファイルが空です。'));
             return;
           }
 
-          const itinerary = this.parseMarkdown(markdown);
-          resolve(itinerary);
+          resolve(this.parseMarkdown(markdown));
         } catch (error) {
-          reject(new Error(error instanceof Error ? error.message : 'ファイルの解析に失敗しました。'));
+          reject(error instanceof Error ? error : new Error('Markdown の読み込みに失敗しました。'));
         }
       };
-      
-      reader.onerror = () => {
-        reject(new Error('ファイルの読み込み中にエラーが発生しました。'));
-      };
-      
+      reader.onerror = () => reject(new Error('Markdown ファイルを読み込めませんでした。'));
       reader.readAsText(file);
     });
   }
 
-  // Markdownを解析してItineraryに変換
+  private buildSafeFileName(title: string): string {
+    const normalized = Array.from(title.trim())
+      .map((char) => {
+        const code = char.charCodeAt(0);
+        if ('<>:"/\\|?*'.includes(char) || code < 32) {
+          return '_';
+        }
+        return char;
+      })
+      .join('');
+    return normalized.slice(0, 80) || 'itinerary';
+  }
+
+  private generateId(prefix: 'itinerary' | 'item'): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return `${prefix}-${crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private assertDate(value: unknown, fieldName: string): string {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      throw new Error(`${fieldName} は YYYY-MM-DD 形式で指定してください。`);
+    }
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error(`${fieldName} が不正です。`);
+    }
+    return value;
+  }
+
+  private normalizeText(value: unknown, fieldName: string, maxLength: number, allowEmpty = false): string {
+    if (typeof value !== 'string') {
+      throw new Error(`${fieldName} が不正です。`);
+    }
+
+    const normalized = value.trim();
+    if (!allowEmpty && normalized.length === 0) {
+      throw new Error(`${fieldName} を入力してください。`);
+    }
+    if (normalized.length > maxLength) {
+      throw new Error(`${fieldName} は ${maxLength} 文字以内にしてください。`);
+    }
+    return normalized;
+  }
+
+  private normalizeAmount(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100000000) {
+      throw new Error('金額が不正です。');
+    }
+    return Math.floor(value);
+  }
+
+  private normalizeImportedItem(item: unknown): ImportedItem {
+    if (!item || typeof item !== 'object') {
+      throw new Error('行程データの形式が不正です。');
+    }
+
+    const raw = item as Record<string, unknown>;
+    return {
+      id: this.generateId('item'),
+      date: this.assertDate(raw.date, '日付'),
+      time: this.normalizeText(raw.time ?? '', '時刻', 10, true),
+      content: this.normalizeText(raw.content, '内容', MAX_CONTENT_LENGTH),
+      amount: this.normalizeAmount(raw.amount),
+      note: this.normalizeText(raw.note ?? '', 'メモ', MAX_NOTE_LENGTH, true),
+    };
+  }
+
+  private normalizeImportedItinerary(data: unknown): Itinerary {
+    if (!data || typeof data !== 'object') {
+      throw new Error('旅程データの形式が不正です。');
+    }
+
+    const raw = data as Record<string, unknown>;
+    if (!Array.isArray(raw.items)) {
+      throw new Error('items は配列で指定してください。');
+    }
+    if (raw.items.length > MAX_ITEMS) {
+      throw new Error(`行程は ${MAX_ITEMS} 件以下にしてください。`);
+    }
+
+    const startDate = this.assertDate(raw.startDate, '開始日');
+    const endDate = this.assertDate(raw.endDate, '終了日');
+    if (new Date(startDate) > new Date(endDate)) {
+      throw new Error('終了日は開始日以降にしてください。');
+    }
+
+    const now = new Date().toISOString();
+    return {
+      id: this.generateId('itinerary'),
+      title: this.normalizeText(raw.title, 'タイトル', MAX_TITLE_LENGTH),
+      startDate,
+      endDate,
+      items: raw.items.map((item) => this.normalizeImportedItem(item)),
+      createdAt: now,
+      updatedAt: now,
+      coverImage: getSafeCoverImage(typeof raw.coverImage === 'string' ? raw.coverImage : ''),
+    };
+  }
+
+  private convertToMarkdown(itinerary: Itinerary): string {
+    const lines: string[] = [];
+    lines.push(`# ${itinerary.title}`, '');
+    lines.push(`**開始日**: ${itinerary.startDate}`);
+    lines.push(`**終了日**: ${itinerary.endDate}`, '', '---', '');
+
+    const itemsByDate = new Map<string, typeof itinerary.items>();
+    itinerary.items.forEach((item) => {
+      if (!itemsByDate.has(item.date)) {
+        itemsByDate.set(item.date, []);
+      }
+      itemsByDate.get(item.date)?.push(item);
+    });
+
+    Array.from(itemsByDate.keys())
+      .sort()
+      .forEach((date) => {
+        lines.push(`## ${date}`, '');
+        const items = [...(itemsByDate.get(date) ?? [])].sort((left, right) =>
+          left.time.localeCompare(right.time),
+        );
+
+        items.forEach((item) => {
+          lines.push(`### ${item.time || '未設定'} | ${item.content}`);
+          if (item.amount > 0) {
+            lines.push(`- **金額**: ${item.amount}`);
+          }
+          if (item.note) {
+            lines.push(`- **メモ**: ${item.note}`);
+          }
+          lines.push('');
+        });
+
+        lines.push('---', '');
+      });
+
+    return lines.join('\n');
+  }
+
   private parseMarkdown(markdown: string): Itinerary {
-    const lines = markdown.split('\n');
+    const lines = markdown.split(/\r?\n/);
     let title = '';
     let startDate = '';
     let endDate = '';
-    const items: Itinerary['items'] = [];
-    
+    const items: ImportedItem[] = [];
+
     let currentDate = '';
     let currentTime = '';
     let currentContent = '';
     let currentAmount = 0;
     let currentNote = '';
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+    const pushCurrentItem = () => {
+      if (!currentDate || !currentContent) {
+        return;
+      }
+      if (items.length >= MAX_ITEMS) {
+        throw new Error(`行程は ${MAX_ITEMS} 件以下にしてください。`);
+      }
+      items.push(
+        this.normalizeImportedItem({
+          date: currentDate,
+          time: currentTime,
+          content: currentContent,
+          amount: currentAmount,
+          note: currentNote,
+        }),
+      );
+    };
 
-      // タイトル
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+
+      if (!line) {
+        continue;
+      }
+
       if (line.startsWith('# ') && !title) {
-        title = line.substring(2).trim();
+        title = line.slice(2).trim();
         continue;
       }
 
-      // 開始日
       if (line.startsWith('**開始日**:')) {
-        startDate = line.split(':')[1].trim();
+        startDate = line.split(':').slice(1).join(':').trim();
         continue;
       }
 
-      // 終了日
       if (line.startsWith('**終了日**:')) {
-        endDate = line.split(':')[1].trim();
+        endDate = line.split(':').slice(1).join(':').trim();
         continue;
       }
 
-      // 日付（## YYYY-MM-DD）
       if (line.startsWith('## ')) {
-        // 前の項目を保存
-        if (currentDate && currentContent) {
-          items.push({
-            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            date: currentDate,
-            time: currentTime,
-            content: currentContent,
-            amount: currentAmount,
-            note: currentNote,
-          });
-        }
-        
-        currentDate = line.substring(3).trim();
+        pushCurrentItem();
+        currentDate = line.slice(3).trim();
         currentTime = '';
         currentContent = '';
         currentAmount = 0;
@@ -376,84 +371,36 @@ class FileService {
         continue;
       }
 
-      // 項目（### HH:MM | 内容）
       if (line.startsWith('### ')) {
-        // 前の項目を保存
-        if (currentDate && currentContent) {
-          items.push({
-            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-            date: currentDate,
-            time: currentTime,
-            content: currentContent,
-            amount: currentAmount,
-            note: currentNote,
-          });
-        }
-
-        const itemLine = line.substring(4).trim();
-        const parts = itemLine.split('|');
-        
-        if (parts.length >= 2) {
-          currentTime = parts[0].trim();
-          currentContent = parts[1].trim();
-        } else {
-          currentTime = '';
-          currentContent = itemLine;
-        }
-        
+        pushCurrentItem();
+        const [timePart, ...contentParts] = line.slice(4).split('|');
+        currentTime = (timePart ?? '').trim();
+        currentContent = contentParts.join('|').trim();
         currentAmount = 0;
         currentNote = '';
         continue;
       }
 
-      // 金額
       if (line.startsWith('- **金額**:')) {
-        const amountStr = line.split(':')[1].trim();
-        currentAmount = parseInt(amountStr) || 0;
+        const amountValue = Number(line.split(':').slice(1).join(':').trim());
+        currentAmount = Number.isFinite(amountValue) ? amountValue : 0;
         continue;
       }
 
-      // 備考
-      if (line.startsWith('- **備考**:')) {
-        currentNote = line.split(':')[1].trim();
-        continue;
+      if (line.startsWith('- **メモ**:')) {
+        currentNote = line.split(':').slice(1).join(':').trim();
       }
     }
 
-    // 最後の項目を保存
-    if (currentDate && currentContent) {
-      items.push({
-        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        date: currentDate,
-        time: currentTime,
-        content: currentContent,
-        amount: currentAmount,
-        note: currentNote,
-      });
-    }
+    pushCurrentItem();
 
-    // バリデーション
-    if (!title) {
-      throw new Error('旅行名が見つかりません。「# 旅行名」の形式で記入してください。');
-    }
-    if (!startDate) {
-      throw new Error('開始日が見つかりません。「**開始日**: YYYY-MM-DD」の形式で記入してください。');
-    }
-    if (!endDate) {
-      throw new Error('終了日が見つかりません。「**終了日**: YYYY-MM-DD」の形式で記入してください。');
-    }
-
-    const now = new Date().toISOString();
-    
-    return {
-      id: `itinerary-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+    return this.normalizeImportedItinerary({
       title,
       startDate,
       endDate,
       items,
-      createdAt: now,
-      updatedAt: now,
-    };
+      coverImage: '',
+    });
   }
 }
 

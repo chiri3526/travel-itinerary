@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import {
+  alpha,
   Box,
   Card,
   CardContent,
-  TextField,
   IconButton,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useSortable } from '@dnd-kit/sortable';
+import { useState } from 'react';
 import type { ItineraryItem } from '../types';
 
 interface TimelineItemProps {
@@ -19,22 +21,17 @@ interface TimelineItemProps {
   onDelete: (id: string) => void;
 }
 
-const TimelineItem: React.FC<TimelineItemProps> = ({ item, onChange, onDelete }) => {
-  const [amountError, setAmountError] = useState<string>('');
+const TimelineItem = ({ item, onChange, onDelete }: TimelineItemProps) => {
+  const [amountError, setAmountError] = useState('');
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
   };
 
   const handleAmountChange = (value: string) => {
@@ -44,250 +41,144 @@ const TimelineItem: React.FC<TimelineItemProps> = ({ item, onChange, onDelete })
       return;
     }
 
-    const numValue = Number(value);
-
-    if (isNaN(numValue)) {
-      setAmountError('数値を入力してください');
+    const amount = Number(value);
+    if (Number.isNaN(amount)) {
+      setAmountError('金額は数字で入力してください。');
       return;
     }
-
-    if (numValue < 0) {
-      setAmountError('0以上の値を入力してください');
+    if (amount < 0) {
+      setAmountError('金額は 0 円以上で入力してください。');
       return;
     }
-
-    if (!Number.isFinite(numValue)) {
-      setAmountError('有効な数値を入力してください');
+    if (!Number.isFinite(amount)) {
+      setAmountError('有効な金額を入力してください。');
       return;
     }
 
     setAmountError('');
-    onChange(item.id, 'amount', numValue);
+    onChange(item.id, 'amount', amount);
   };
 
   return (
     <Box
       ref={setNodeRef}
       style={style}
-      sx={{
-        display: 'flex',
-        gap: { xs: 1, sm: 2 },
-        mb: { xs: 2, sm: 3 },
-        alignItems: 'flex-start',
-      }}
+      sx={{ display: 'flex', gap: { xs: 1.5, md: 2 }, alignItems: 'stretch', mb: 2.5 }}
     >
-      {/* Timeline dot and line */}
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          position: 'relative',
-        }}
-      >
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 1 }}>
         <IconButton
           size="small"
           {...attributes}
           {...listeners}
           sx={{
             cursor: isDragging ? 'grabbing' : 'grab',
-            color: 'primary.main',
-            p: 0.5,
-            mb: 1,
+            backgroundColor: 'rgba(255,255,255,0.84)',
+            border: '1px solid',
+            borderColor: 'divider',
+            color: 'secondary.main',
           }}
         >
-          <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              backgroundColor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'inherit',
-            }}
-          />
+          <DragIndicatorRoundedIcon fontSize="small" />
         </IconButton>
         <Box
           sx={{
-            position: 'absolute',
-            left: '50%',
-            top: '100%',
+            flex: 1,
             width: 2,
-            height: { xs: 'calc(100% + 1rem)', sm: 'calc(100% + 1.5rem)' },
-            backgroundColor: '#e0e0e0',
-            transform: 'translateX(-50%)',
+            minHeight: 56,
+            mt: 1,
+            borderRadius: 99,
+            backgroundColor: alpha('#5F7A65', 0.22),
           }}
         />
       </Box>
 
-      {/* Card content */}
       <Card
         sx={{
           flex: 1,
-          mb: { xs: 0, sm: 0 },
-          backgroundColor: '#fafafa',
-          border: '1px solid #e8e8e8',
-          '&:hover': {
-            backgroundColor: '#f5f5f5',
-          },
+          backgroundColor: alpha('#FFFDF8', 0.96),
+          borderStyle: 'dashed',
         }}
       >
-        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: 2 } }}>
-          {/* Date & Time Row */}
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                display: 'block',
-                color: 'text.secondary',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                mb: 0.5,
-              }}
-            >
-              DATE & TIME
-            </Typography>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={{ xs: 1, sm: 2 }}
-              alignItems={{ xs: 'flex-start', sm: 'center' }}
-            >
-              <TextField
-                type="date"
-                value={item.date}
-                onChange={(e) => onChange(item.id, 'date', e.target.value)}
-                size="small"
-                sx={{
-                  minWidth: { xs: '100%', sm: 140 },
-                  '& input': {
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                  },
-                }}
-              />
-              <TextField
-                type="time"
-                value={item.time}
-                onChange={(e) => onChange(item.id, 'time', e.target.value)}
-                size="small"
-                sx={{
-                  minWidth: { xs: '100%', sm: 120 },
-                  '& input': {
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                  },
-                }}
-              />
+        <CardContent sx={{ p: { xs: 2, md: 2.5 }, '&:last-child': { pb: { xs: 2, md: 2.5 } } }}>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                  日付
+                </Typography>
+                <TextField
+                  type="date"
+                  fullWidth
+                  size="small"
+                  value={item.date}
+                  onChange={(event) => onChange(item.id, 'date', event.target.value)}
+                />
+              </Box>
+              <Box sx={{ flex: { xs: 1, sm: '0 0 180px' } }}>
+                <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                  時間
+                </Typography>
+                <TextField
+                  type="time"
+                  fullWidth
+                  size="small"
+                  value={item.time}
+                  onChange={(event) => onChange(item.id, 'time', event.target.value)}
+                />
+              </Box>
             </Stack>
-          </Box>
 
-          {/* Activity Row */}
-          <Box sx={{ mb: 2 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                display: 'block',
-                color: 'text.secondary',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                mb: 0.5,
-              }}
-            >
-              ACTIVITY
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 1 }} alignItems="flex-start">
+            <Box>
+              <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                予定
+              </Typography>
               <TextField
-                value={item.content}
-                onChange={(e) => onChange(item.id, 'content', e.target.value)}
-                placeholder="活動内容を入力"
-                size="small"
                 fullWidth
-                sx={{
-                  flex: { xs: 'unset', sm: 1 },
-                  '& input::placeholder': {
-                    opacity: 0.6,
-                  },
-                }}
+                size="small"
+                value={item.content}
+                placeholder="例: 駅に到着してホテルへ移動"
+                onChange={(event) => onChange(item.id, 'content', event.target.value)}
               />
-              <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
+              <Box sx={{ width: { xs: '100%', sm: 180 } }}>
+                <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                  使った予算
+                </Typography>
                 <TextField
                   type="number"
-                  value={item.amount || ''}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  placeholder="0"
+                  fullWidth
                   size="small"
-                  error={!!amountError}
-                  helperText={amountError}
+                  value={item.amount || ''}
+                  onChange={(event) => handleAmountChange(event.target.value)}
+                  error={Boolean(amountError)}
+                  helperText={amountError || '未入力でも大丈夫です'}
                   inputProps={{ min: 0 }}
-                  sx={{
-                    flex: 1,
-                    minWidth: 80,
-                    '& input::placeholder': {
-                      opacity: 0.6,
-                    },
-                  }}
                 />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'text.secondary',
-                    pt: 1,
-                    fontSize: { xs: '0.875rem', sm: '0.9rem' },
-                    minWidth: 'fit-content',
-                  }}
-                >
-                  JPY
+              </Box>
+              <Box sx={{ flex: 1, width: '100%' }}>
+                <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
+                  メモ
                 </Typography>
-              </Stack>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  size="small"
+                  value={item.note}
+                  placeholder="待ち合わせ場所や持ち物などを残せます"
+                  onChange={(event) => onChange(item.id, 'note', event.target.value)}
+                />
+              </Box>
             </Stack>
-          </Box>
 
-          {/* Notes Row */}
-          <Box sx={{ mb: 1 }}>
-            <Typography
-              variant="caption"
-              sx={{
-                display: 'block',
-                color: 'text.secondary',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                mb: 0.5,
-              }}
-            >
-              NOTES / REMARKS
-            </Typography>
-            <TextField
-              value={item.note}
-              onChange={(e) => onChange(item.id, 'note', e.target.value)}
-              placeholder="詳細、チケット、方向などを追加..."
-              size="small"
-              fullWidth
-              multiline
-              rows={2}
-              sx={{
-                '& .MuiOutlinedInput-input::placeholder': {
-                  opacity: 0.5,
-                },
-              }}
-            />
-          </Box>
-
-          {/* Delete button */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
-            <IconButton
-              onClick={() => onDelete(item.id)}
-              color="error"
-              size="small"
-              sx={{
-                p: 0.5,
-              }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton color="error" onClick={() => onDelete(item.id)} aria-label="行を削除">
+                <DeleteOutlineIcon />
+              </IconButton>
+            </Box>
+          </Stack>
         </CardContent>
       </Card>
     </Box>

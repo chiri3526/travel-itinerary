@@ -1,19 +1,107 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && request.auth.uid == data.userId;
+    }
+
+    function hasOnlyAllowedKeys(data) {
+      return data.keys().hasOnly([
+        'id',
+        'title',
+        'startDate',
+        'endDate',
+        'items',
+        'createdAt',
+        'updatedAt',
+        'coverImage',
+        'userId'
+      ]);
+    }
+
+    function isValidDate(value) {
+      return value is string && value.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+
+    function isSafeCoverImage(value) {
+      return value is string
+        && value.size() <= 7000000
+        && (
+          value == ''
+          || value.matches('^data:image\\/(png|jpeg|jpg|webp|gif|avif);base64,[A-Za-z0-9+/=]+$')
+          || value.matches('^https:\\/\\/[A-Za-z0-9._~:\\/?#[\\]@!$&''()*+,;=%-]+$')
+        );
+    }
+
+    function isValidItem(item) {
+      return item is map
+        && item.keys().hasOnly(['id', 'date', 'time', 'content', 'amount', 'note'])
+        && item.id is string
+        && item.id.size() > 0
+        && item.id.size() <= 128
+        && isValidDate(item.date)
+        && item.time is string
+        && item.time.size() <= 10
+        && item.content is string
+        && item.content.size() > 0
+        && item.content.size() <= 200
+        && item.amount is number
+        && item.amount >= 0
+        && item.amount <= 100000000
+        && item.note is string
+        && item.note.size() <= 500;
+    }
+
+    function areValidItems(items) {
+      return items is list
+        && items.size() <= 200
+        && items.where(item, !isValidItem(item)).size() == 0;
+    }
+
+    function isValidItinerary(data) {
+      return hasOnlyAllowedKeys(data)
+        && data.id is string
+        && data.id.size() > 0
+        && data.id.size() <= 128
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 100
+        && isValidDate(data.startDate)
+        && isValidDate(data.endDate)
+        && areValidItems(data.items)
+        && data.createdAt is string
+        && data.createdAt.size() > 0
+        && data.createdAt.size() <= 40
+        && data.updatedAt is string
+        && data.updatedAt.size() > 0
+        && data.updatedAt.size() <= 40
+        && ('coverImage' in data ? isSafeCoverImage(data.coverImage) : true)
+        && data.userId is string
+        && data.userId == request.auth.uid;
+    }
+
     // Itineraries collection rules
     match /itineraries/{itineraryId} {
       // Allow read if the user is authenticated and owns the document
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if isOwner(resource.data);
       
       // Allow create if the user is authenticated and sets themselves as the owner
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow create: if isOwner(request.resource.data) && isValidItinerary(request.resource.data);
       
       // Allow update if the user is authenticated and owns the document
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update: if isOwner(resource.data)
+        && isOwner(request.resource.data)
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.id == resource.id
+        && isValidItinerary(request.resource.data);
       
       // Allow delete if the user is authenticated and owns the document
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow delete: if isOwner(resource.data);
     }
   }
 }

@@ -1,240 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+/* eslint-disable react-hooks/set-state-in-effect */
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PhotoCameraBackOutlinedIcon from '@mui/icons-material/PhotoCameraBackOutlined';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import {
-  Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
+  alpha,
+  Alert,
   Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
   Divider,
   Stack,
-  Alert,
-  IconButton,
+  TextField,
+  Typography,
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { ja } from 'date-fns/locale';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {
-  DndContext,
   closestCenter,
+  DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useItinerary } from '../contexts/ItineraryContext';
-import type { ItineraryItem } from '../types';
+import { ja } from 'date-fns/locale';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import PageSection from '../components/PageSection';
 import TimelineItem from '../components/TimelineItem';
+import { useItinerary } from '../contexts/ItineraryContext';
 import ItineraryService from '../services/ItineraryService';
+import type { ItineraryItem } from '../types';
+import { getSafeCoverImage, validateCoverImageFile } from '../utils/coverImage';
 
-const ItineraryFormPage: React.FC = () => {
+const ItineraryFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { getItinerary, addItinerary, updateItinerary } = useItinerary();
+  const { addItinerary, getItinerary, updateItinerary } = useItinerary();
 
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [items, setItems] = useState<ItineraryItem[]>([]);
-  const [coverImage, setCoverImage] = useState<string>('');
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [coverImage, setCoverImage] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [showValidationError, setShowValidationError] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const itinerary = getItinerary(id);
-      if (itinerary) {
-        setTitle(itinerary.title);
-        setStartDate(new Date(itinerary.startDate));
-        setEndDate(new Date(itinerary.endDate));
-        setItems(itinerary.items);
-        setCoverImage(itinerary.coverImage || '');
-      }
+    if (!id) {
+      return;
     }
-  }, [id, getItinerary]);
 
-  const generateItemId = () => {
-    return `item-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-  };
+    const itinerary = getItinerary(id);
+    if (!itinerary) {
+      return;
+    }
 
-  const handleAddItem = () => {
-    const newItem: ItineraryItem = {
-      id: generateItemId(),
-      date: startDate ? startDate.toISOString().split('T')[0] : '',
-      time: '',
-      content: '',
-      amount: 0,
-      note: '',
-    };
-    setItems([...items, newItem]);
-  };
+    setTitle(itinerary.title);
+    setStartDate(new Date(itinerary.startDate));
+    setEndDate(new Date(itinerary.endDate));
+    setItems(itinerary.items);
+    setCoverImage(getSafeCoverImage(itinerary.coverImage) || '');
+  }, [getItinerary, id]);
 
-  const handleItemChange = (id: string, field: keyof ItineraryItem, value: string | number) => {
-    setItems(items.map(item => (item.id === id ? { ...item, [field]: value } : item)));
-  };
-
-  const handleDeleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-
-  // ドラッグ&ドロップのセンサー設定
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // ドラッグ終了時の処理
+  const generateItemId = () => `item-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  const handleAddItem = () => {
+    setItems((current) => [
+      ...current,
+      {
+        id: generateItemId(),
+        date: startDate ? startDate.toISOString().split('T')[0] : '',
+        time: '',
+        content: '',
+        amount: 0,
+        note: '',
+      },
+    ]);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-
-        return arrayMove(items, oldIndex, newIndex);
-      });
+    if (!over || active.id === over.id) {
+      return;
     }
+
+    setItems((current) => {
+      const oldIndex = current.findIndex((item) => item.id === active.id);
+      const newIndex = current.findIndex((item) => item.id === over.id);
+      return arrayMove(current, oldIndex, newIndex);
+    });
   };
 
-  // 画像処理関数
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // ファイルサイズチェック (5MB制限)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors({ ...errors, coverImage: '画像サイズは5MB以下にしてください' });
-        return;
-      }
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
 
-      // ファイル形式チェック
-      if (!file.type.startsWith('image/')) {
-        setErrors({ ...errors, coverImage: '画像ファイルを選択してください' });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setCoverImage(result);
-        // エラーをクリア
-        const newErrors = { ...errors };
-        delete newErrors.coverImage;
-        setErrors(newErrors);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageRemove = () => {
-    setCoverImage('');
-  };
-
-  const validate = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    // Validate title
     if (!title.trim()) {
-      newErrors.title = '旅行名を入力してください';
+      nextErrors.title = '旅の名前を入力してください。';
     } else if (title.trim().length > 100) {
-      newErrors.title = '旅行名は100文字以内で入力してください';
-    } else if (title.trim().length < 1) {
-      newErrors.title = '旅行名は1文字以上で入力してください';
+      nextErrors.title = '旅の名前は100文字以内で入力してください。';
     }
 
-    // Validate start date
     if (!startDate) {
-      newErrors.startDate = '開始日を選択してください';
-    } else if (isNaN(startDate.getTime())) {
-      newErrors.startDate = '有効な日付を選択してください';
-    } else {
-      // Check if date is too far in the past or future
-      const year = startDate.getFullYear();
-      if (year < 1900 || year > 2100) {
-        newErrors.startDate = '1900年から2100年の間の日付を選択してください';
-      }
+      nextErrors.startDate = '出発日を選んでください。';
     }
 
-    // Validate end date
     if (!endDate) {
-      newErrors.endDate = '終了日を選択してください';
-    } else if (isNaN(endDate.getTime())) {
-      newErrors.endDate = '有効な日付を選択してください';
-    } else {
-      // Check if date is too far in the past or future
-      const year = endDate.getFullYear();
-      if (year < 1900 || year > 2100) {
-        newErrors.endDate = '1900年から2100年の間の日付を選択してください';
+      nextErrors.endDate = '帰着日を選んでください。';
+    }
+
+    if (startDate && endDate) {
+      if (!ItineraryService.validateDates(startDate.toISOString(), endDate.toISOString())) {
+        nextErrors.dates = '帰着日は出発日以降にしてください。';
+      }
+
+      const dayDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (dayDiff > 365) {
+        nextErrors.dates = '旅程は1年以内で入力してください。';
       }
     }
 
-    // Validate date range
-    if (startDate && endDate && !isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
-      if (!ItineraryService.validateDates(startStr, endStr)) {
-        newErrors.dates = '終了日は開始日以降の日付を選択してください';
-      }
-      
-      // Check if date range is reasonable (not more than 1 year)
-      const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff > 365) {
-        newErrors.dates = '旅行期間は1年以内で設定してください';
-      }
-    }
-
-    // Validate items
     items.forEach((item, index) => {
       if (item.amount < 0) {
-        newErrors[`item-${index}-amount`] = `行${index + 1}: 金額は0以上の値を入力してください`;
+        nextErrors[`amount-${index}`] = `${index + 1}件目の金額は0円以上で入力してください。`;
       }
-      if (!Number.isFinite(item.amount)) {
-        newErrors[`item-${index}-amount`] = `行${index + 1}: 有効な金額を入力してください`;
+      if (item.content.length > 200) {
+        nextErrors[`content-${index}`] = `${index + 1}件目の予定は200文字以内で入力してください。`;
       }
-      if (item.amount > 10000000) {
-        newErrors[`item-${index}-amount`] = `行${index + 1}: 金額は10,000,000以下で入力してください`;
-      }
-      if (item.content && item.content.length > 200) {
-        newErrors[`item-${index}-content`] = `行${index + 1}: 内容は200文字以内で入力してください`;
-      }
-      if (item.note && item.note.length > 500) {
-        newErrors[`item-${index}-note`] = `行${index + 1}: 備考は500文字以内で入力してください`;
+      if (item.note.length > 500) {
+        nextErrors[`note-${index}`] = `${index + 1}件目のメモは500文字以内で入力してください。`;
       }
     });
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (!validate()) {
       setShowValidationError(true);
-      // Scroll to top to show error message
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    setShowValidationError(false);
-
     try {
       const itineraryData = {
-        title,
+        title: title.trim(),
         startDate: startDate!.toISOString().split('T')[0],
         endDate: endDate!.toISOString().split('T')[0],
         items,
@@ -242,281 +172,306 @@ const ItineraryFormPage: React.FC = () => {
       };
 
       if (id) {
-        updateItinerary(id, itineraryData);
+        await updateItinerary(id, itineraryData);
       } else {
-        addItinerary(itineraryData);
+        await addItinerary(itineraryData);
       }
 
       navigate('/');
     } catch (error) {
-      // Error will be handled by context and shown in notification
       setShowValidationError(true);
-      const errorMessage = error instanceof Error ? error.message : '保存中にエラーが発生しました';
-      setErrors({ submit: errorMessage });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setErrors({
+        submit: error instanceof Error ? error.message : '保存中にエラーが発生しました。',
+      });
     }
-  };
-
-  const handleCancel = () => {
-    navigate('/');
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ja}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Container maxWidth="md" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, flex: 1 }}>
-          <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-            <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-              {id ? '行程表を編集' : '新しい行程表を作成'}
-            </Typography>
+      <Container sx={{ px: { xs: 0, md: 1 } }}>
+        <Stack spacing={3} component="form" onSubmit={handleSubmit}>
+          <Box sx={{ px: { xs: 1, md: 0 } }}>
+            <Button startIcon={<ArrowBackRoundedIcon />} onClick={() => navigate('/')} variant="text">
+              一覧へ戻る
+            </Button>
+          </Box>
 
+          <PageSection
+            eyebrow={id ? '旅程の編集' : '新しい旅程'}
+            title={id ? '旅程を編集する' : '旅程を作成する'}
+            description="名前、日程、予定を入力して保存します。"
+            action={
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                <Button variant="outlined" onClick={() => navigate('/')}>
+                  戻る
+                </Button>
+                <Button variant="contained" startIcon={<SaveRoundedIcon />} type="submit">
+                  保存する
+                </Button>
+              </Stack>
+            }
+          >
             {showValidationError && Object.keys(errors).length > 0 && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setShowValidationError(false)}>
-                <Typography variant="body2" fontWeight="bold" gutterBottom>
-                  入力内容に誤りがあります
-                </Typography>
-                <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                  {Object.values(errors).map((error, index) => (
-                    <li key={index}>
-                      <Typography variant="body2">{error}</Typography>
-                    </li>
-                  ))}
-                </Box>
+              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setShowValidationError(false)}>
+                入力内容を確認してください。
               </Alert>
             )}
 
-            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-                <TextField
-                  label="旅行名"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  fullWidth
-                  required
-                  error={!!errors.title}
-                  helperText={errors.title}
-                  sx={{ mb: { xs: 2, sm: 2 } }}
-                />
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 2, sm: 2 }}>
-                  <DatePicker
-                    label="開始日"
-                    value={startDate}
-                    onChange={(date) => setStartDate(date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        required: true,
-                        error: !!errors.startDate,
-                        helperText: errors.startDate,
-                      },
-                    }}
-                    sx={{ width: '100%' }}
-                  />
-                  <DatePicker
-                    label="終了日"
-                    value={endDate}
-                    onChange={(date) => setEndDate(date)}
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        required: true,
-                        error: !!errors.endDate,
-                        helperText: errors.endDate,
-                      },
-                    }}
-                    sx={{ width: '100%' }}
-                  />
-                </Stack>
-                {errors.dates && (
-                  <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
-                    {errors.dates}
+            <Stack spacing={3.5}>
+              <Card>
+                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                  <Typography variant="h6">基本情報</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, mb: 2.5, lineHeight: 1.8 }}>
+                    旅の名前と日程を入力します。
                   </Typography>
-                )}
-              </Box>
 
-              {/* 画像アップロード */}
-              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-                <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
-                  サムネイル画像
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {coverImage ? (
-                    <Box sx={{ position: 'relative', display: 'inline-block', maxWidth: 300 }}>
-                      <img
-                        src={coverImage}
-                        alt="サムネイル"
-                        style={{
-                          width: '100%',
-                          height: 200,
-                          objectFit: 'cover',
-                          borderRadius: 8,
-                          border: '1px solid #ddd'
+                  <Stack spacing={2}>
+                    <TextField
+                      label="旅の名前"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="例: 初夏の金沢ひとり旅"
+                      error={Boolean(errors.title)}
+                      helperText={errors.title}
+                      fullWidth
+                    />
+
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                      <DatePicker
+                        label="出発日"
+                        value={startDate}
+                        onChange={(value) => setStartDate(value)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: Boolean(errors.startDate),
+                            helperText: errors.startDate,
+                          },
                         }}
                       />
-                      <IconButton
-                        onClick={handleImageRemove}
-                        sx={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          bgcolor: 'rgba(0,0,0,0.5)',
-                          color: 'white',
-                          '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }
+                      <DatePicker
+                        label="帰着日"
+                        value={endDate}
+                        onChange={(value) => setEndDate(value)}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: Boolean(errors.endDate),
+                            helperText: errors.endDate,
+                          },
                         }}
-                        size="small"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  ) : (
+                      />
+                    </Stack>
+
+                    {errors.dates && (
+                      <Typography color="error" variant="caption">
+                        {errors.dates}
+                      </Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                  <Typography variant="h6">表紙画像</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.8 }}>
+                    必要な場合のみ表紙画像を設定できます。
+                  </Typography>
+
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mt: 2.5 }}>
                     <Box
                       sx={{
-                        width: '100%',
-                        maxWidth: 300,
+                        width: { xs: '100%', md: 260 },
                         height: 200,
-                        border: '2px dashed #ddd',
                         borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '1px dashed',
+                        borderColor: errors.coverImage ? 'error.main' : 'divider',
+                        background: getSafeCoverImage(coverImage)
+                          ? `center / cover no-repeat url(${getSafeCoverImage(coverImage)})`
+                          : 'linear-gradient(180deg, rgba(236,229,216,0.95), rgba(245,240,230,0.98))',
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: 'pointer',
-                        '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.50' }
+                        flexDirection: 'column',
+                        gap: 1,
                       }}
-                      onClick={() => document.getElementById('image-upload')?.click()}
                     >
-                      <PhotoCameraIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        画像をアップロード
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        JPG, PNG (最大5MB)
+                      {!coverImage && (
+                        <>
+                          <PhotoCameraBackOutlinedIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
+                          <Typography variant="body2" color="text.secondary">
+                            表紙画像を設定できます
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+
+                    <Stack spacing={1.5} alignItems="flex-start" justifyContent="center">
+                      <Button variant="outlined" component="label" startIcon={<PhotoCameraBackOutlinedIcon />}>
+                        画像を選ぶ
+                        <input
+                          hidden
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (!file) {
+                              return;
+                            }
+
+                            const validationError = validateCoverImageFile(file);
+                            if (validationError) {
+                              setErrors((current) => ({
+                                ...current,
+                                coverImage: validationError,
+                              }));
+                              return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = (loadEvent) => {
+                              const nextCoverImage = getSafeCoverImage(loadEvent.target?.result as string);
+                              if (!nextCoverImage) {
+                                setErrors((current) => ({
+                                  ...current,
+                                  coverImage: '画像を読み込めませんでした。PNG か JPEG などをお試しください。',
+                                }));
+                                return;
+                              }
+                              setCoverImage(nextCoverImage);
+                              setErrors((current) => {
+                                const next = { ...current };
+                                delete next.coverImage;
+                                return next;
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </Button>
+
+                      {coverImage && (
+                        <Button
+                          variant="text"
+                          color="inherit"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={() => setCoverImage('')}
+                        >
+                          画像を外す
+                        </Button>
+                      )}
+
+                      {errors.coverImage && (
+                        <Typography variant="caption" color="error">
+                          {errors.coverImage}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
+                    <Box>
+                      <Typography variant="h6">予定の内容</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.8 }}>
+                        時間、内容、メモ、予算を追加できます。順番の変更もできます。
                       </Typography>
                     </Box>
-                  )}
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: 'none' }}
-                  />
-                  {!coverImage && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<PhotoCameraIcon />}
-                      onClick={() => document.getElementById('image-upload')?.click()}
-                      sx={{ maxWidth: 200 }}
-                    >
-                      画像を選択
+                    <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={handleAddItem}>
+                      予定を追加
                     </Button>
+                  </Stack>
+
+                  <Divider sx={{ my: 3 }} />
+
+                  {items.length === 0 ? (
+                    <Box
+                      sx={{
+                        borderRadius: 2,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        py: 6,
+                        px: 3,
+                        textAlign: 'center',
+                        backgroundColor: alpha('#FFFDF8', 0.75),
+                      }}
+                    >
+                      <Typography variant="h6">まだ予定がありません</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.8 }}>
+                        予定を追加して旅程を作成します。
+                      </Typography>
+                      <Button sx={{ mt: 3 }} variant="outlined" startIcon={<AddRoundedIcon />} onClick={handleAddItem}>
+                        最初の予定を追加
+                      </Button>
+                    </Box>
+                  ) : (
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+                        <Box>
+                          {items.map((item) => (
+                            <TimelineItem
+                              key={item.id}
+                              item={item}
+                              onChange={(itemId, field, value) =>
+                                setItems((current) =>
+                                  current.map((entry) =>
+                                    entry.id === itemId ? { ...entry, [field]: value } : entry,
+                                  ),
+                                )
+                              }
+                              onDelete={(itemId) =>
+                                setItems((current) => current.filter((entry) => entry.id !== itemId))
+                              }
+                            />
+                          ))}
+                        </Box>
+                      </SortableContext>
+                    </DndContext>
                   )}
-                  {errors.coverImage && (
-                    <Typography color="error" variant="caption">
-                      {errors.coverImage}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
+                </CardContent>
+              </Card>
+            </Stack>
+          </PageSection>
 
-              <Divider sx={{ my: 3 }} />
-
-              <Box sx={{ mb: { xs: 2, sm: 3 } }}>
-                <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}>
-                  行程詳細
-                </Typography>
-
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <Box sx={{ position: 'relative' }}>
-                    <SortableContext items={items.map(item => item.id)} strategy={verticalListSortingStrategy}>
-                      {items.map((item) => (
-                        <TimelineItem
-                          key={item.id}
-                          item={item}
-                          onChange={handleItemChange}
-                          onDelete={handleDeleteItem}
-                        />
-                      ))}
-                    </SortableContext>
-                  </Box>
-                </DndContext>
-              </Box>
-            </Box>
-          </Paper>
-        </Container>
-
-        {/* Fixed Footer with Action Buttons */}
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{
-            position: 'sticky',
-            bottom: 0,
-            backgroundColor: 'background.paper',
-            borderTop: '1px solid',
-            borderTopColor: 'divider',
-            boxShadow: '0px -2px 4px rgba(0, 0, 0, 0.1)',
-            p: { xs: 1, sm: 1.5 },
-            mx: 'auto',
-            maxWidth: 'md',
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <Box sx={{ width: '100%', px: { xs: 2, sm: 3 } }}>
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={1}
-              sx={{ mb: 0 }}
+          <Box
+            sx={{
+              position: 'sticky',
+              bottom: 12,
+              zIndex: 3,
+              mx: { xs: 1, md: 0 },
+            }}
+          >
+            <Box
+              sx={{
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: alpha('#FFFDF8', 0.95),
+                boxShadow: '0 10px 22px rgba(91, 65, 46, 0.06)',
+                px: 1.25,
+                py: 1.25,
+              }}
             >
-              <Button
-                startIcon={<AddIcon />}
-                onClick={handleAddItem}
-                variant="contained"
-                fullWidth
-                size="small"
-                sx={{ 
-                  order: { xs: 1, sm: 1 },
-                }}
-              >
-                行を追加
-              </Button>
-
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1}
-                justifyContent="flex-end"
-                sx={{ width: { xs: '100%', sm: 'auto' }, order: { xs: 2, sm: 2 } }}
-              >
-                <Button 
-                  type="submit" 
-                  variant="contained"
-                  fullWidth
-                  size="small"
-                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                >
-                  保存
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <Button fullWidth variant="outlined" onClick={handleAddItem} startIcon={<AddRoundedIcon />}>
+                  予定を追加
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleCancel}
-                  fullWidth
-                  size="small"
-                  sx={{ width: { xs: '100%', sm: 'auto' } }}
-                >
-                  キャンセル
+                <Button fullWidth variant="outlined" onClick={() => navigate('/')}>
+                  戻る
+                </Button>
+                <Button fullWidth variant="contained" type="submit" startIcon={<SaveRoundedIcon />}>
+                  保存する
                 </Button>
               </Stack>
-            </Stack>
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </Stack>
+      </Container>
     </LocalizationProvider>
   );
 };
